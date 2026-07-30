@@ -1,1 +1,592 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Venustas & Tímpano — banco de esculturas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --bg2: #111;
+    --bg3: #1a1a1a;
+    --border: #2a2a2a;
+    --accent: #c8b89a;
+    --accent2: #8a7a6a;
+    --text: #e8e0d4;
+    --text2: #888;
+    --text3: #555;
+  }
+
+  :root[data-theme="light"] {
+    --bg: #f4f1ea;
+    --bg2: #ebe7dd;
+    --bg3: #e2ddd0;
+    --border: #d3ccbb;
+    --accent: #8a7250;
+    --accent2: #a89478;
+    --text: #2a2419;
+    --text2: #6b6355;
+    --text3: #9a9284;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,10,10,0.96);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+  }
+  .header-inner {
+    max-width: 1500px; margin: 0 auto;
+    display: flex; align-items: center; gap: 28px;
+    height: 66px; flex-wrap: wrap;
+  }
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px; letter-spacing: 6px;
+    color: var(--accent); flex-shrink: 0; line-height: 1;
+  }
+  .logo span {
+    color: var(--text3); font-size: 9px;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 2px; display: block; margin-top: -2px;
+  }
+  .search-wrap { flex: 1; max-width: 520px; position: relative; min-width: 200px; }
+  .search-wrap input {
+    width: 100%; background: var(--bg3);
+    border: 1px solid var(--border); color: var(--text);
+    font-family: 'Space Mono', monospace; font-size: 12px;
+    padding: 10px 44px 10px 16px; outline: none;
+    transition: border-color 0.2s; letter-spacing: 1px;
+  }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-wrap input::placeholder { color: var(--text3); }
+  .search-btn {
+    position: absolute; right: 0; top: 0; bottom: 0;
+    background: var(--accent); border: none; color: var(--bg);
+    padding: 0 16px; cursor: pointer; font-size: 14px;
+    transition: background 0.2s;
+  }
+  .search-btn:hover { background: var(--text); }
+
+  /* HERO */
+  .hero {
+    max-width: 1500px; margin: 0 auto;
+    padding: 40px 24px 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(40px, 7vw, 80px);
+    font-weight: 300; font-style: italic;
+    line-height: 0.9; letter-spacing: -1px;
+  }
+  .hero-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+  .hero-tag {
+    background: none; border: 1px solid var(--border);
+    color: var(--text2); font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 1px; padding: 5px 11px;
+    cursor: pointer; transition: all 0.15s; text-transform: uppercase;
+  }
+  .hero-tag:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* MAIN */
+  .main { max-width: 1500px; margin: 0 auto; padding: 28px 24px 64px; }
+  .status-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 22px; font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--text3);
+  }
+  .status-dot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); margin-right: 8px; animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* GRID */
+  .grid { columns: 5 200px; column-gap: 12px; }
+  .card {
+    break-inside: avoid; margin-bottom: 12px; position: relative;
+    overflow: hidden; cursor: pointer; background: var(--bg3);
+    border: 1px solid var(--border);
+  }
+  .card img { width: 100%; display: block; transition: transform 0.4s, filter 0.4s; }
+  .card:hover img { transform: scale(1.04); }
+  body.mono .card img,
+  body.mono .modal-card img { filter: grayscale(100%) contrast(1.05); }
+  .card-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.1) 45%, transparent 70%);
+    opacity: 0; transition: opacity 0.3s;
+    display: flex; flex-direction: column; justify-content: flex-end; padding: 14px;
+  }
+  .card:hover .card-overlay { opacity: 1; }
+  .card-title {
+    font-family: 'Cormorant Garamond', serif; font-size: 14px;
+    font-style: italic; line-height: 1.3; margin-bottom: 8px;
+  }
+  .card-badge {
+    display: inline-block; align-self: flex-start;
+    background: var(--accent); color: var(--bg);
+    font-size: 9px; letter-spacing: 1px; padding: 4px 8px;
+    text-transform: uppercase; font-weight: 700;
+  }
+  .card-badge.mono { background: rgba(255,255,255,0.15); color: var(--text); }
+
+  /* LOADING */
+  .loading { text-align: center; padding: 80px 24px; }
+  .loading-ring {
+    display: inline-block; width: 40px; height: 40px;
+    border: 1px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading p { font-size: 10px; letter-spacing: 3px; color: var(--text3); text-transform: uppercase; }
+
+  .empty { text-align: center; padding: 80px 24px; color: var(--text3); }
+  .empty .big {
+    font-family: 'Cormorant Garamond', serif; font-size: 48px;
+    font-style: italic; margin-bottom: 12px; color: var(--border);
+  }
+  .empty p { font-size: 11px; letter-spacing: 2px; }
+
+  /* MODAL */
+  .modal-bg {
+    position: fixed; inset: 0; background: var(--bg);
+    z-index: 999; display: none; padding: 0; overflow-y: auto;
+  }
+  .modal-bg.open { display: block; }
+  .modal {
+    max-width: 1400px; margin: 0 auto; min-height: 100vh; padding: 24px;
+  }
+  .modal-header {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--bg); backdrop-filter: blur(12px);
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 24px; padding: 20px 0; margin-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-title-lg {
+    font-family: 'Cormorant Garamond', serif; font-size: 32px;
+    font-style: italic; font-weight: 300; line-height: 1.1; margin-bottom: 10px;
+  }
+  .modal-meta {
+    font-size: 10px; color: var(--text3); letter-spacing: 1.5px;
+    text-transform: uppercase; line-height: 2;
+  }
+  .modal-meta a { color: var(--accent2); text-decoration: none; }
+  .modal-meta a:hover { color: var(--accent); }
+  .modal-close {
+    background: none; border: 1px solid var(--border); color: var(--text2);
+    width: 40px; height: 40px; cursor: pointer; font-size: 18px;
+    flex-shrink: 0; transition: all 0.2s;
+  }
+  .modal-close:hover { border-color: var(--accent); color: var(--accent); }
+
+  .angle-count {
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 20px;
+  }
+
+  .modal-grid { columns: 3 300px; column-gap: 14px; }
+  .modal-card {
+    break-inside: avoid; margin-bottom: 14px; position: relative;
+    background: var(--bg3); border: 1px solid var(--border); overflow: hidden;
+  }
+  .modal-card img { width: 100%; display: block; transition: filter 0.4s; }
+  .modal-card-actions {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    display: flex; gap: 6px; padding: 12px;
+    background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .modal-card:hover .modal-card-actions { opacity: 1; }
+  .dl-btn {
+    background: var(--accent); border: none; color: var(--bg);
+    font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 1px;
+    padding: 7px 12px; cursor: pointer; text-transform: uppercase;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 4px;
+    transition: background 0.2s;
+  }
+  .dl-btn:hover { background: var(--text); }
+  .dl-btn.sec { background: rgba(255,255,255,0.12); color: var(--text); }
+  .dl-btn.sec:hover { background: rgba(255,255,255,0.25); }
+
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--accent);
+    color: var(--bg); font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    padding: 12px 20px; z-index: 9999; transform: translateY(80px); opacity: 0;
+    transition: all 0.3s;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  .load-more-wrap { text-align: center; margin-top: 44px; }
+  .load-more {
+    background: none; border: 1px solid var(--border); color: var(--text2);
+    font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 3px;
+    padding: 14px 40px; cursor: pointer; text-transform: uppercase; transition: all 0.2s;
+  }
+  .load-more:hover { border-color: var(--accent); color: var(--accent); }
+
+  .info-bar {
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+    padding: 9px 24px; font-size: 9px; letter-spacing: 2px;
+    color: var(--text3); text-align: center; text-transform: uppercase;
+  }
+  .info-bar a { color: var(--accent2); text-decoration: none; }
+
+  .theme-btn {
+    background: none; border: 1px solid var(--border); color: var(--text2);
+    font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 2px;
+    padding: 8px 14px; cursor: pointer; text-transform: uppercase;
+    transition: all 0.2s; flex-shrink: 0;
+  }
+  .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="info-bar">
+  Acervo: <a href="https://www.metmuseum.org" target="_blank">The Met Museum</a> · Greek &amp; Roman Art · domínio público CC0 · uso livre pessoal e comercial
+</div>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">VENUSTAS<span>&amp; tímpano · banco de esculturas</span></div>
+    <div class="search-wrap">
+      <input type="text" id="searchInput" placeholder="buscar: statue, bust, goddess, torso..." />
+      <button class="search-btn" onclick="doSearch()">→</button>
+    </div>
+    <button class="theme-btn" id="monoBtn" onclick="toggleMono()">◐ p&amp;b</button>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">☾ escuro</button>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="hero-title">escultura &amp; mármore</div>
+  <div class="hero-tags">
+    <button class="hero-tag" onclick="quickSearch('statue')">estátua</button>
+    <button class="hero-tag" onclick="quickSearch('marble bust')">busto</button>
+    <button class="hero-tag" onclick="quickSearch('goddess')">deusa</button>
+    <button class="hero-tag" onclick="quickSearch('torso')">torso</button>
+    <button class="hero-tag" onclick="quickSearch('head')">cabeça</button>
+    <button class="hero-tag" onclick="quickSearch('relief')">relevo</button>
+    <button class="hero-tag" onclick="quickSearch('athlete')">atleta</button>
+    <button class="hero-tag" onclick="quickSearch('sarcophagus')">sarcófago</button>
+    <button class="hero-tag" onclick="quickSearch('grave stele')">estela</button>
+    <button class="hero-tag" onclick="quickSearch('kouros')">kouros</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="status-bar">
+    <div><span class="status-dot"></span><span id="statusText">carregando acervo...</span></div>
+    <div id="countText"></div>
+  </div>
+  <div id="grid" class="grid"></div>
+  <div id="loading" class="loading"><div class="loading-ring"></div><p>buscando no met museum...</p></div>
+  <div id="empty" class="empty" style="display:none">
+    <div class="big">∅</div><p>nenhuma escultura encontrada</p>
+  </div>
+  <div class="load-more-wrap" id="loadMoreWrap" style="display:none">
+    <button class="load-more" onclick="loadMore()">carregar mais</button>
+  </div>
+</div>
+
+<!-- MODAL: TODOS OS ÂNGULOS -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title-lg" id="modalTitle"></div>
+        <div class="modal-meta" id="modalMeta"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="angle-count" id="angleCount"></div>
+    <div class="modal-grid" id="modalGrid"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════
+//  MET MUSEUM API — Greek & Roman Art (departmentId = 13)
+// ════════════════════════════════════════════════════
+const MET = 'https://collectionapi.metmuseum.org/public/collection/v1';
+const DEPT = 13;
+const PER_PAGE = 25;
+
+let currentIds = [];   // todos os IDs da busca atual
+let shownCount = 0;    // quantos já foram renderizados
+let currentQuery = 'sculpture';
+
+// ── BUSCA ──────────────────────────────────────────
+async function doSearch(reset = true) {
+  const q = document.getElementById('searchInput').value.trim() || currentQuery;
+  currentQuery = q;
+  if (reset) {
+    currentIds = [];
+    shownCount = 0;
+    document.getElementById('grid').innerHTML = '';
+    document.getElementById('loadMoreWrap').style.display = 'none';
+    document.getElementById('empty').style.display = 'none';
+  }
+  setLoading(true);
+  document.getElementById('statusText').textContent = `buscando "${q}"...`;
+
+  try {
+    const url = `${MET}/search?hasImages=true&departmentId=${DEPT}&q=${encodeURIComponent(q)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    currentIds = data.objectIDs || [];
+  } catch(e) {
+    console.error(e);
+    currentIds = [];
+  }
+
+  if (currentIds.length === 0) {
+    setLoading(false);
+    document.getElementById('empty').style.display = 'block';
+    document.getElementById('statusText').textContent = `"${q}"`;
+    document.getElementById('countText').textContent = '0 resultados';
+    return;
+  }
+
+  document.getElementById('countText').textContent = `${currentIds.length} objetos`;
+  await renderPage();
+  setLoading(false);
+  document.getElementById('statusText').textContent = `"${q}"`;
+}
+
+// ── RENDERIZAR PÁGINA ──────────────────────────────
+async function renderPage() {
+  const slice = currentIds.slice(shownCount, shownCount + PER_PAGE);
+  shownCount += slice.length;
+
+  const objects = await Promise.all(
+    slice.map(id => fetch(`${MET}/objects/${id}`).then(r => r.json()).catch(() => null))
+  );
+
+  const grid = document.getElementById('grid');
+  let added = 0;
+  objects.forEach(obj => {
+    if (!obj || !obj.primaryImageSmall) return;
+    added++;
+    const nAngles = 1 + (obj.additionalImages ? obj.additionalImages.length : 0);
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <img src="${obj.primaryImageSmall}" alt="${esc(obj.title)}" loading="lazy"
+           onerror="this.parentElement.remove()">
+      <div class="card-overlay">
+        <div class="card-title">${esc(truncate(obj.title || 'Sem título', 55))}</div>
+        <span class="card-badge ${nAngles > 1 ? '' : 'mono'}">
+          ${nAngles > 1 ? '◈ ' + nAngles + ' ângulos' : '1 foto'}
+        </span>
+      </div>`;
+    card.onclick = () => openModal(obj);
+    grid.appendChild(card);
+  });
+
+  document.getElementById('loadMoreWrap').style.display =
+    shownCount < currentIds.length ? 'block' : 'none';
+}
+
+async function loadMore() {
+  setLoading(true);
+  await renderPage();
+  setLoading(false);
+}
+
+function quickSearch(q) {
+  document.getElementById('searchInput').value = q;
+  doSearch(true);
+}
+
+// ── MODAL: TODOS OS ÂNGULOS ────────────────────────
+function openModal(obj) {
+  const imgs = [];
+  if (obj.primaryImage) imgs.push(obj.primaryImage);
+  if (obj.additionalImages) imgs.push(...obj.additionalImages);
+
+  document.getElementById('modalTitle').textContent = obj.title || 'Sem título';
+  document.getElementById('modalMeta').innerHTML = `
+    ${esc(obj.artistDisplayName || 'Artista desconhecido')} · ${esc(obj.objectDate || '')}<br>
+    ${esc(obj.medium || '')}<br>
+    <span style="color:var(--accent2)">CC0 · Domínio Público</span> ·
+    <a href="${obj.objectURL}" target="_blank">ver no Met ↗</a> ·
+    ID: ${obj.objectID}
+  `;
+  document.getElementById('angleCount').textContent =
+    imgs.length > 1 ? `${imgs.length} ângulos disponíveis` : '1 imagem disponível';
+
+  const mg = document.getElementById('modalGrid');
+  mg.innerHTML = '';
+  imgs.forEach((url, i) => {
+    const c = document.createElement('div');
+    c.className = 'modal-card';
+    const filename = `met_${obj.objectID}_${i === 0 ? 'principal' : 'angulo' + i}`;
+    c.innerHTML = `
+      <img src="${url}" alt="ângulo ${i+1}" loading="lazy" crossorigin="anonymous">
+      <div class="modal-card-actions">
+        <button class="dl-btn" onclick="smartDownload('${url}', '${filename}')">↓ baixar</button>
+        <button class="dl-btn sec" onclick="copyUrl('${url}')">copiar url</button>
+      </div>`;
+    mg.appendChild(c);
+  });
+
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.querySelector('.modal-bg').scrollTop = 0;
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ── UTILS ──────────────────────────────────────────
+function setLoading(v) {
+  document.getElementById('loading').style.display = v ? 'block' : 'none';
+}
+function truncate(s, n) { return s.length > n ? s.slice(0, n) + '...' : s; }
+function esc(s) {
+  return (s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+function copyUrl(url) {
+  navigator.clipboard.writeText(url).then(() => showToast('URL copiada'));
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// keyboard
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch(true);
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target.id === 'modal') closeModal();
+});
+
+// ── DOWNLOAD INTELIGENTE ───────────────────────────
+// Se modo P&B estiver ligado, gera a versão preto-e-branco de verdade
+// via canvas. Se estiver colorido, baixa o original direto.
+async function smartDownload(url, filename) {
+  // Modo colorido: baixa o original direto
+  if (!monoOn) {
+    baixarDireto(url, filename + '.jpg');
+    return;
+  }
+
+  // Modo P&B: reprocessa em canvas
+  showToast('gerando versão p&b...');
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = url;
+    });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+
+    // aplica grayscale pixel a pixel (luminância ponderada)
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const px = data.data;
+    for (let i = 0; i < px.length; i += 4) {
+      const cinza = 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
+      px[i] = px[i+1] = px[i+2] = cinza;
+    }
+    ctx.putImageData(data, 0, 0);
+
+    canvas.toBlob(blob => {
+      if (!blob) { fallbackColorido(url, filename); return; }
+      const blobUrl = URL.createObjectURL(blob);
+      baixarDireto(blobUrl, filename + '_pb.jpg');
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 4000);
+      showToast('salvo em p&b');
+    }, 'image/jpeg', 0.95);
+
+  } catch (e) {
+    // servidor não liberou reprocessamento — oferece colorido
+    fallbackColorido(url, filename);
+  }
+}
+
+function fallbackColorido(url, filename) {
+  showToast('p&b indisponível — baixando colorido');
+  baixarDireto(url, filename + '.jpg');
+}
+
+function baixarDireto(url, nome) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nome;
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// ── MODO P&B ───────────────────────────────────────
+let monoOn = true; // começa em preto e branco
+
+function toggleMono() {
+  monoOn = !monoOn;
+  const btn = document.getElementById('monoBtn');
+  if (monoOn) {
+    document.body.classList.add('mono');
+    btn.textContent = '◐ p&b';
+  } else {
+    document.body.classList.remove('mono');
+    btn.textContent = '◐ cor';
+  }
+}
+
+// ── TEMA ───────────────────────────────────────────
+function toggleTheme() {
+  const root = document.documentElement;
+  const isLight = root.getAttribute('data-theme') === 'light';
+  const btn = document.getElementById('themeBtn');
+  if (isLight) {
+    root.removeAttribute('data-theme');
+    btn.textContent = '☾ escuro';
+  } else {
+    root.setAttribute('data-theme', 'light');
+    btn.textContent = '☀ claro';
+  }
+}
+
+// ── INIT ───────────────────────────────────────────
+window.addEventListener('load', () => {
+  document.body.classList.add('mono'); // inicia em p&b
+  document.getElementById('searchInput').value = 'sculpture';
+  doSearch(true);
+});
+</script>
+</body>
+</html>
 
