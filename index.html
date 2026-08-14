@@ -102,6 +102,7 @@
     cursor: pointer; transition: all 0.15s; text-transform: uppercase;
   }
   .hero-tag:hover { border-color: var(--accent); color: var(--accent); }
+  .hero-tag.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
 
   /* MAIN */
   .main { max-width: 1500px; margin: 0 auto; padding: 28px 24px 64px; }
@@ -334,18 +335,9 @@
 </header>
 
 <div class="hero">
-  <div class="hero-title">escultura &amp; mármore</div>
-  <div class="hero-tags">
-    <button class="hero-tag" onclick="quickSearch('statue')">estátua</button>
-    <button class="hero-tag" onclick="quickSearch('marble bust')">busto</button>
-    <button class="hero-tag" onclick="quickSearch('goddess')">deusa</button>
-    <button class="hero-tag" onclick="quickSearch('torso')">torso</button>
-    <button class="hero-tag" onclick="quickSearch('head')">cabeça</button>
-    <button class="hero-tag" onclick="quickSearch('relief')">relevo</button>
-    <button class="hero-tag" onclick="quickSearch('athlete')">atleta</button>
-    <button class="hero-tag" onclick="quickSearch('sarcophagus')">sarcófago</button>
-    <button class="hero-tag" onclick="quickSearch('grave stele')">estela</button>
-    <button class="hero-tag" onclick="quickSearch('kouros')">kouros</button>
+  <div class="hero-title">escultura grega &amp; clássica</div>
+  <div class="hero-tags" id="heroTags">
+    <!-- categorias inseridas via JS a partir do acervo -->
   </div>
 </div>
 
@@ -395,16 +387,16 @@
 
 <script>
 // ════════════════════════════════════════════════════
-//  SUPABASE — acervo em cache (leitura rápida)
+//  ACERVO — arquivo local (acervo.json), servido junto ao site
+//  Nunca trava, nunca pausa. Curado só com esculturas clássicas.
 // ════════════════════════════════════════════════════
-const SUPABASE_URL = 'https://kmqfijyhmesxkqxfgary.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_UlDBhTtizztzXNItw962Bg_TT-JYWII';
+let ACERVO = [];          // carregado do acervo.json no início
+let CATEGORIAS = [];
 
 // ════════════════════════════════════════════════════
 //  MET MUSEUM API — usada só ao abrir uma peça (ângulos)
 // ════════════════════════════════════════════════════
 const MET = 'https://collectionapi.metmuseum.org/public/collection/v1';
-const DEPT = 13;
 const PER_PAGE = 25;
 
 let shownCount = 0;    // quantos já foram renderizados
@@ -475,11 +467,12 @@ function updateCounts() {
   document.getElementById('cntNope').textContent = n;
 }
 
-// ── BUSCA (lê do Supabase — rápido, sem travar) ────
-let allResults = [];   // todos os registros retornados do banco
+// ── BUSCA (filtra o acervo local — instantâneo) ────
+let allResults = [];      // resultados da busca/filtro atual
+let currentCategoria = null;  // categoria ativa (ou null = todas)
 
-async function doSearch(reset = true) {
-  const q = document.getElementById('searchInput').value.trim() || currentQuery;
+function doSearch(reset = true) {
+  const q = (document.getElementById('searchInput').value.trim() || '').toLowerCase();
   currentQuery = q;
   const meuToken = ++searchToken;
 
@@ -490,65 +483,51 @@ async function doSearch(reset = true) {
     document.getElementById('empty').querySelector('p').textContent = 'nenhuma escultura encontrada';
   }
   if (reset) {
-    allResults = [];
     shownCount = 0;
     document.getElementById('grid').innerHTML = '';
     document.getElementById('loadMoreWrap').style.display = 'none';
     document.getElementById('empty').style.display = 'none';
   }
-  setLoading(true);
-  document.getElementById('statusText').textContent = `buscando "${q}"...`;
 
-  let registros = [];
-  try {
-    let url;
-    if (!q || q === 'sculpture' || q === '*') {
-      // acervo completo, ordenado
-      url = `${SUPABASE_URL}/rest/v1/esculturas?select=*&order=met_id.asc`;
-    } else {
-      // busca no título OU no tipo (ilike = case-insensitive, %q% = contém)
-      const termo = encodeURIComponent(`%${q}%`);
-      url = `${SUPABASE_URL}/rest/v1/esculturas` +
-            `?select=*` +
-            `&or=(titulo.ilike.${termo},tipo.ilike.${termo})` +
-            `&order=met_id.asc`;
-    }
-    const res = await fetch(url, {
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-    });
-    registros = await res.json();
-    if (!Array.isArray(registros)) registros = [];
-  } catch(e) {
-    console.error(e);
-    registros = [];
+  // filtra o acervo em memória
+  let filtrados = ACERVO.slice();
+
+  // por categoria (se houver uma ativa)
+  if (currentCategoria) {
+    filtrados = filtrados.filter(r => r.categoria === currentCategoria);
   }
 
-  if (meuToken !== searchToken) return;
+  // por texto (título ou tipo)
+  if (q) {
+    filtrados = filtrados.filter(r =>
+      (r.titulo || '').toLowerCase().includes(q) ||
+      (r.tipo || '').toLowerCase().includes(q) ||
+      (r.categoria || '').toLowerCase().includes(q)
+    );
+  }
 
-  // normaliza pro formato que os cards esperam
-  allResults = registros.map(normalizar);
+  allResults = filtrados.map(normalizar);
 
-  const ehAcervoTodo = (!q || q === 'sculpture' || q === '*');
+  const semFiltro = (!q && !currentCategoria);
 
   if (allResults.length === 0) {
-    setLoading(false);
     document.getElementById('empty').style.display = 'block';
     document.getElementById('empty').querySelector('p').textContent =
-      ehAcervoTodo
-        ? 'acervo vazio — rode atualizar_acervo.py pra popular'
-        : `nada encontrado pra "${q}"`;
-    document.getElementById('statusText').textContent = ehAcervoTodo ? 'acervo' : `"${q}"`;
+      semFiltro ? 'acervo vazio' : 'nada encontrado com esse filtro';
+    document.getElementById('statusText').textContent =
+      currentCategoria ? currentCategoria : (q ? `"${q}"` : 'acervo');
     document.getElementById('countText').textContent = '0 resultados';
     return;
   }
 
   document.getElementById('countText').textContent = `${allResults.length} esculturas`;
   renderPage(meuToken);
-  setLoading(false);
-  document.getElementById('statusText').textContent = ehAcervoTodo ? 'acervo completo' : `"${q}"`;
+  document.getElementById('statusText').textContent =
+    currentCategoria ? currentCategoria
+    : (q ? `"${q}"` : 'acervo completo');
 }
 
-// converte um registro do banco no formato usado pelos cards/modal
+// converte um registro do acervo no formato usado pelos cards/modal
 function normalizar(r) {
   return {
     objectID: r.met_id,
@@ -557,16 +536,16 @@ function normalizar(r) {
     objectDate: r.data_obj,
     medium: r.material,
     objectName: r.tipo,
+    categoria: r.categoria,
     objectURL: r.object_url,
     primaryImageSmall: r.thumb,
     primaryImage: r.imagem_full,
     n_angulos_cache: r.n_angulos || 1,
-    // additionalImages virá do Met só quando abrir a peça:
     additionalImages: null
   };
 }
 
-// ── RENDERIZAR PÁGINA (do cache, sem chamadas ao Met) ──
+// ── RENDERIZAR PÁGINA (do acervo, sem chamadas externas) ──
 function renderPage(meuToken) {
   const slice = allResults.slice(shownCount, shownCount + PER_PAGE);
   shownCount += slice.length;
@@ -656,12 +635,46 @@ function loadMore() {
   renderPage(searchToken);
 }
 
-let quickTimer = null;
-function quickSearch(q) {
-  document.getElementById('searchInput').value = q;
-  // espera 250ms; se clicar em outro atalho antes disso, cancela o anterior
-  clearTimeout(quickTimer);
-  quickTimer = setTimeout(() => doSearch(true), 250);
+// ── CATEGORIAS (menu do hero) ──────────────────────
+// monta os botões de categoria a partir do que existe no acervo
+function montarCategorias() {
+  const cont = document.getElementById('heroTags');
+  cont.innerHTML = '';
+
+  // conta quantas esculturas há em cada categoria
+  const contagem = {};
+  ACERVO.forEach(r => {
+    const c = r.categoria || 'outras';
+    contagem[c] = (contagem[c] || 0) + 1;
+  });
+
+  // botão "todas"
+  const btnTodas = document.createElement('button');
+  btnTodas.className = 'hero-tag active';
+  btnTodas.textContent = `todas (${ACERVO.length})`;
+  btnTodas.onclick = () => selecionarCategoria(null, btnTodas);
+  cont.appendChild(btnTodas);
+
+  // um botão por categoria (na ordem definida no acervo.json, se houver)
+  const ordem = CATEGORIAS.length ? CATEGORIAS : Object.keys(contagem);
+  ordem.forEach(cat => {
+    if (!contagem[cat]) return; // pula categoria sem itens
+    const b = document.createElement('button');
+    b.className = 'hero-tag';
+    b.textContent = `${cat} (${contagem[cat]})`;
+    b.onclick = () => selecionarCategoria(cat, b);
+    cont.appendChild(b);
+  });
+}
+
+// filtra o acervo por categoria (ou null = todas)
+function selecionarCategoria(cat, btn) {
+  currentCategoria = cat;
+  document.querySelectorAll('.hero-tag').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  // limpa a busca de texto ao trocar de categoria
+  document.getElementById('searchInput').value = '';
+  doSearch(true);
 }
 
 // ── ABAS: acervo / gostei / talvez / não gostei ────
@@ -839,7 +852,13 @@ function showToast(msg) {
 
 // keyboard
 document.getElementById('searchInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') doSearch(true);
+  if (e.key === 'Enter') {
+    // busca por texto ignora a categoria: procura no acervo inteiro
+    currentCategoria = null;
+    document.querySelectorAll('.hero-tag').forEach((t, i) =>
+      t.classList.toggle('active', i === 0));  // marca "todas"
+    doSearch(true);
+  }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 document.getElementById('modal').addEventListener('click', e => {
@@ -941,12 +960,27 @@ function toggleTheme() {
 }
 
 // ── INIT ───────────────────────────────────────────
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
   document.body.classList.add('mono'); // inicia em p&b
-  updateCounts();                      // mostra contadores salvos
-  document.getElementById('searchInput').value = '';
+  updateCounts();                      // contadores salvos
+  setLoading(true);
+
+  // carrega o acervo do arquivo local
+  try {
+    const res = await fetch('acervo.json');
+    const data = await res.json();
+    ACERVO = data.esculturas || [];
+    CATEGORIAS = data.categorias || [];
+  } catch(e) {
+    console.error('erro ao carregar acervo.json', e);
+    ACERVO = [];
+  }
+
+  setLoading(false);
+  montarCategorias();       // monta o menu de categorias
   currentQuery = '';
-  doSearch(true);                      // carrega o acervo completo do banco
+  currentCategoria = null;
+  doSearch(true);           // mostra o acervo completo
 });
 </script>
 </body>
