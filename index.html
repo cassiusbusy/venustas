@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -247,6 +248,64 @@
   }
   .info-bar a { color: var(--accent2); text-decoration: none; }
 
+  /* ── AVALIAÇÃO ── */
+  .rate-row { display: flex; gap: 5px; margin-top: 8px; }
+  .rate-btn {
+    flex: 1; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.15);
+    color: var(--text); font-family: 'Space Mono', monospace; font-size: 13px;
+    padding: 6px 0; cursor: pointer; transition: all 0.15s; border-radius: 2px;
+  }
+  .rate-btn:hover { border-color: var(--accent); }
+  .rate-btn.on-like    { background: #2e7d4f; border-color: #2e7d4f; }
+  .rate-btn.on-maybe   { background: #b8891f; border-color: #b8891f; }
+  .rate-btn.on-nope    { background: #a13d3d; border-color: #a13d3d; }
+
+  /* selo de status no canto do card */
+  .rate-flag {
+    position: absolute; top: 8px; left: 8px; z-index: 3;
+    font-size: 14px; width: 26px; height: 26px; border-radius: 50%;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.65);
+  }
+  .rate-flag.show { display: flex; }
+  .rate-flag.f-like  { background: #2e7d4f; }
+  .rate-flag.f-maybe { background: #b8891f; }
+  .rate-flag.f-nope  { background: #a13d3d; }
+
+  /* abas */
+  .tabs-bar {
+    display: flex; gap: 0; margin-bottom: 24px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+  }
+  .view-tab {
+    background: none; border: none; border-bottom: 2px solid transparent;
+    color: var(--text3); font-family: 'Space Mono', monospace; font-size: 11px;
+    letter-spacing: 2px; padding: 12px 18px; cursor: pointer; text-transform: uppercase;
+    transition: all 0.2s; margin-bottom: -1px;
+  }
+  .view-tab:hover { color: var(--text2); }
+  .view-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .view-tab .cnt {
+    display: inline-block; margin-left: 6px; font-size: 9px;
+    background: var(--bg3); color: var(--text2); padding: 1px 6px; border-radius: 8px;
+  }
+  .view-tab.active .cnt { background: var(--accent); color: var(--bg); }
+
+  /* avaliação dentro do modal */
+  .modal-rate {
+    display: flex; gap: 8px; margin-bottom: 24px; align-items: center; flex-wrap: wrap;
+  }
+  .modal-rate-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); }
+  .m-rate-btn {
+    background: var(--bg3); border: 1px solid var(--border); color: var(--text);
+    font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 1px;
+    padding: 9px 16px; cursor: pointer; transition: all 0.15s; text-transform: uppercase;
+  }
+  .m-rate-btn:hover { border-color: var(--accent); }
+  .m-rate-btn.on-like  { background: #2e7d4f; border-color: #2e7d4f; color: #fff; }
+  .m-rate-btn.on-maybe { background: #b8891f; border-color: #b8891f; color: #fff; }
+  .m-rate-btn.on-nope  { background: #a13d3d; border-color: #a13d3d; color: #fff; }
+
   .theme-btn {
     background: none; border: 1px solid var(--border); color: var(--text2);
     font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 2px;
@@ -291,6 +350,12 @@
 </div>
 
 <div class="main">
+  <div class="tabs-bar">
+    <button class="view-tab active" data-view="all" onclick="setView('all', this)">acervo</button>
+    <button class="view-tab" data-view="like" onclick="setView('like', this)">gostei <span class="cnt" id="cntLike">0</span></button>
+    <button class="view-tab" data-view="maybe" onclick="setView('maybe', this)">talvez <span class="cnt" id="cntMaybe">0</span></button>
+    <button class="view-tab" data-view="nope" onclick="setView('nope', this)">não gostei <span class="cnt" id="cntNope">0</span></button>
+  </div>
   <div class="status-bar">
     <div><span class="status-dot"></span><span id="statusText">carregando acervo...</span></div>
     <div id="countText"></div>
@@ -316,6 +381,12 @@
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="angle-count" id="angleCount"></div>
+    <div class="modal-rate">
+      <span class="modal-rate-label">o que achou?</span>
+      <button class="m-rate-btn" id="mLike"  onclick="rateFromModal('like')">♥ gostei</button>
+      <button class="m-rate-btn" id="mMaybe" onclick="rateFromModal('maybe')">◐ talvez</button>
+      <button class="m-rate-btn" id="mNope"  onclick="rateFromModal('nope')">✕ não gostei</button>
+    </div>
     <div class="modal-grid" id="modalGrid"></div>
   </div>
 </div>
@@ -324,22 +395,102 @@
 
 <script>
 // ════════════════════════════════════════════════════
-//  MET MUSEUM API — Greek & Roman Art (departmentId = 13)
+//  SUPABASE — acervo em cache (leitura rápida)
+// ════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://kmqfijyhmesxkqxfgary.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_UlDBhTtizztzXNItw962Bg_TT-JYWII';
+
+// ════════════════════════════════════════════════════
+//  MET MUSEUM API — usada só ao abrir uma peça (ângulos)
 // ════════════════════════════════════════════════════
 const MET = 'https://collectionapi.metmuseum.org/public/collection/v1';
 const DEPT = 13;
 const PER_PAGE = 25;
 
-let currentIds = [];   // todos os IDs da busca atual
 let shownCount = 0;    // quantos já foram renderizados
 let currentQuery = 'sculpture';
+let currentView = 'all';   // aba ativa: all | like | maybe | nope
+let modalObj = null;       // objeto aberto no modal
+let searchToken = 0;       // identifica a busca mais recente (anti-corrida)
 
-// ── BUSCA ──────────────────────────────────────────
+// ════════════════════════════════════════════════════
+//  AVALIAÇÕES — salvas no navegador (localStorage)
+//  Estrutura: { "<id>": { estado:'like|maybe|nope', obj:{...} } }
+// ════════════════════════════════════════════════════
+const STORE_KEY = 'venustas_ratings';
+
+function loadRatings() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }
+  catch(e) { return {}; }
+}
+function saveRatings(r) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(r));
+}
+let ratings = loadRatings();
+
+// guarda um resumo leve do objeto pra poder mostrar nas abas depois
+function slimObj(obj) {
+  return {
+    objectID: obj.objectID,
+    title: obj.title,
+    artistDisplayName: obj.artistDisplayName,
+    objectDate: obj.objectDate,
+    medium: obj.medium,
+    objectURL: obj.objectURL,
+    primaryImage: obj.primaryImage,
+    primaryImageSmall: obj.primaryImageSmall,
+    additionalImages: obj.additionalImages || []
+  };
+}
+
+function getState(id) {
+  return ratings[id] ? ratings[id].estado : null;
+}
+
+// define/remove avaliação. Clicar no mesmo estado desmarca.
+function setRating(obj, estado) {
+  const id = obj.objectID;
+  if (ratings[id] && ratings[id].estado === estado) {
+    delete ratings[id];             // clicou de novo = tira
+  } else {
+    ratings[id] = { estado, obj: slimObj(obj) };
+  }
+  saveRatings(ratings);
+  updateCounts();
+  refreshCardFlag(id);
+  if (modalObj && modalObj.objectID === id) syncModalButtons(id);
+  // se estamos numa aba filtrada, re-renderiza pra sumir/aparecer
+  if (currentView !== 'all') renderView(currentView);
+}
+
+function updateCounts() {
+  let l = 0, m = 0, n = 0;
+  Object.values(ratings).forEach(r => {
+    if (r.estado === 'like') l++;
+    else if (r.estado === 'maybe') m++;
+    else if (r.estado === 'nope') n++;
+  });
+  document.getElementById('cntLike').textContent = l;
+  document.getElementById('cntMaybe').textContent = m;
+  document.getElementById('cntNope').textContent = n;
+}
+
+// ── BUSCA (lê do Supabase — rápido, sem travar) ────
+let allResults = [];   // todos os registros retornados do banco
+
 async function doSearch(reset = true) {
   const q = document.getElementById('searchInput').value.trim() || currentQuery;
   currentQuery = q;
+  const meuToken = ++searchToken;
+
+  if (reset && currentView !== 'all') {
+    currentView = 'all';
+    document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('.view-tab[data-view="all"]').classList.add('active');
+    document.getElementById('empty').querySelector('p').textContent = 'nenhuma escultura encontrada';
+  }
   if (reset) {
-    currentIds = [];
+    allResults = [];
     shownCount = 0;
     document.getElementById('grid').innerHTML = '';
     document.getElementById('loadMoreWrap').style.display = 'none';
@@ -348,80 +499,242 @@ async function doSearch(reset = true) {
   setLoading(true);
   document.getElementById('statusText').textContent = `buscando "${q}"...`;
 
+  let registros = [];
   try {
-    const url = `${MET}/search?hasImages=true&departmentId=${DEPT}&q=${encodeURIComponent(q)}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    currentIds = data.objectIDs || [];
+    let url;
+    if (!q || q === 'sculpture' || q === '*') {
+      // acervo completo, ordenado
+      url = `${SUPABASE_URL}/rest/v1/esculturas?select=*&order=met_id.asc`;
+    } else {
+      // busca no título OU no tipo (ilike = case-insensitive, %q% = contém)
+      const termo = encodeURIComponent(`%${q}%`);
+      url = `${SUPABASE_URL}/rest/v1/esculturas` +
+            `?select=*` +
+            `&or=(titulo.ilike.${termo},tipo.ilike.${termo})` +
+            `&order=met_id.asc`;
+    }
+    const res = await fetch(url, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    });
+    registros = await res.json();
+    if (!Array.isArray(registros)) registros = [];
   } catch(e) {
     console.error(e);
-    currentIds = [];
+    registros = [];
   }
 
-  if (currentIds.length === 0) {
+  if (meuToken !== searchToken) return;
+
+  // normaliza pro formato que os cards esperam
+  allResults = registros.map(normalizar);
+
+  const ehAcervoTodo = (!q || q === 'sculpture' || q === '*');
+
+  if (allResults.length === 0) {
     setLoading(false);
     document.getElementById('empty').style.display = 'block';
-    document.getElementById('statusText').textContent = `"${q}"`;
+    document.getElementById('empty').querySelector('p').textContent =
+      ehAcervoTodo
+        ? 'acervo vazio — rode atualizar_acervo.py pra popular'
+        : `nada encontrado pra "${q}"`;
+    document.getElementById('statusText').textContent = ehAcervoTodo ? 'acervo' : `"${q}"`;
     document.getElementById('countText').textContent = '0 resultados';
     return;
   }
 
-  document.getElementById('countText').textContent = `${currentIds.length} objetos`;
-  await renderPage();
+  document.getElementById('countText').textContent = `${allResults.length} esculturas`;
+  renderPage(meuToken);
   setLoading(false);
-  document.getElementById('statusText').textContent = `"${q}"`;
+  document.getElementById('statusText').textContent = ehAcervoTodo ? 'acervo completo' : `"${q}"`;
 }
 
-// ── RENDERIZAR PÁGINA ──────────────────────────────
-async function renderPage() {
-  const slice = currentIds.slice(shownCount, shownCount + PER_PAGE);
+// converte um registro do banco no formato usado pelos cards/modal
+function normalizar(r) {
+  return {
+    objectID: r.met_id,
+    title: r.titulo,
+    artistDisplayName: r.artista,
+    objectDate: r.data_obj,
+    medium: r.material,
+    objectName: r.tipo,
+    objectURL: r.object_url,
+    primaryImageSmall: r.thumb,
+    primaryImage: r.imagem_full,
+    n_angulos_cache: r.n_angulos || 1,
+    // additionalImages virá do Met só quando abrir a peça:
+    additionalImages: null
+  };
+}
+
+// ── RENDERIZAR PÁGINA (do cache, sem chamadas ao Met) ──
+function renderPage(meuToken) {
+  const slice = allResults.slice(shownCount, shownCount + PER_PAGE);
   shownCount += slice.length;
 
-  const objects = await Promise.all(
-    slice.map(id => fetch(`${MET}/objects/${id}`).then(r => r.json()).catch(() => null))
-  );
+  if (meuToken !== undefined && meuToken !== searchToken) return;
 
   const grid = document.getElementById('grid');
-  let added = 0;
-  objects.forEach(obj => {
+  slice.forEach(obj => {
     if (!obj || !obj.primaryImageSmall) return;
-    added++;
-    const nAngles = 1 + (obj.additionalImages ? obj.additionalImages.length : 0);
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = `
-      <img src="${obj.primaryImageSmall}" alt="${esc(obj.title)}" loading="lazy"
-           onerror="this.parentElement.remove()">
-      <div class="card-overlay">
-        <div class="card-title">${esc(truncate(obj.title || 'Sem título', 55))}</div>
-        <span class="card-badge ${nAngles > 1 ? '' : 'mono'}">
-          ${nAngles > 1 ? '◈ ' + nAngles + ' ângulos' : '1 foto'}
-        </span>
-      </div>`;
-    card.onclick = () => openModal(obj);
-    grid.appendChild(card);
+    grid.appendChild(buildCard(obj));
   });
 
   document.getElementById('loadMoreWrap').style.display =
-    shownCount < currentIds.length ? 'block' : 'none';
+    shownCount < allResults.length ? 'block' : 'none';
 }
 
-async function loadMore() {
-  setLoading(true);
-  await renderPage();
-  setLoading(false);
+// monta um card com botões de avaliação + selo de status
+function buildCard(obj) {
+  const nAngles = obj.additionalImages
+    ? 1 + obj.additionalImages.length
+    : (obj.n_angulos_cache || 1);
+  const estado = getState(obj.objectID);
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.id = obj.objectID;
+
+  const flagIcon = estado === 'like' ? '♥' : estado === 'maybe' ? '◐' : estado === 'nope' ? '✕' : '';
+  const flagCls  = estado ? `f-${estado} show` : '';
+
+  card.innerHTML = `
+    <div class="rate-flag ${flagCls}" data-flag>${flagIcon}</div>
+    <img src="${obj.primaryImageSmall}" alt="${esc(obj.title)}" loading="lazy"
+         onerror="this.closest('.card').remove()">
+    <div class="card-overlay">
+      <div class="card-title">${esc(truncate(obj.title || 'Sem título', 55))}</div>
+      <span class="card-badge ${nAngles > 1 ? '' : 'mono'}">
+        ${nAngles > 1 ? '◈ ' + nAngles + ' ângulos' : '1 foto'}
+      </span>
+      <div class="rate-row">
+        <button class="rate-btn ${estado==='like'?'on-like':''}"   title="gostei"     data-r="like">♥</button>
+        <button class="rate-btn ${estado==='maybe'?'on-maybe':''}" title="talvez"     data-r="maybe">◐</button>
+        <button class="rate-btn ${estado==='nope'?'on-nope':''}"   title="não gostei" data-r="nope">✕</button>
+      </div>
+    </div>`;
+
+  // clique na imagem/título abre o modal
+  card.querySelector('img').onclick = () => openModal(obj);
+  card.querySelector('.card-title').onclick = () => openModal(obj);
+
+  // cliques nos botões de avaliação (sem abrir modal)
+  card.querySelectorAll('.rate-btn').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      setRating(obj, btn.dataset.r);
+      // atualiza visual dos botões deste card
+      const novoEstado = getState(obj.objectID);
+      card.querySelectorAll('.rate-btn').forEach(b => {
+        b.className = 'rate-btn' +
+          (b.dataset.r === novoEstado ? ' on-' + novoEstado : '');
+      });
+    };
+  });
+
+  return card;
 }
 
+// atualiza o selo de um card específico na tela (quando muda pelo modal)
+function refreshCardFlag(id) {
+  const card = document.querySelector(`.card[data-id="${id}"]`);
+  if (!card) return;
+  const estado = getState(id);
+  const flag = card.querySelector('[data-flag]');
+  if (!flag) return;
+  if (estado) {
+    const icon = estado === 'like' ? '♥' : estado === 'maybe' ? '◐' : '✕';
+    flag.textContent = icon;
+    flag.className = `rate-flag f-${estado} show`;
+  } else {
+    flag.className = 'rate-flag';
+  }
+  card.querySelectorAll('.rate-btn').forEach(b => {
+    b.className = 'rate-btn' + (b.dataset.r === estado ? ' on-' + estado : '');
+  });
+}
+
+function loadMore() {
+  renderPage(searchToken);
+}
+
+let quickTimer = null;
 function quickSearch(q) {
   document.getElementById('searchInput').value = q;
-  doSearch(true);
+  // espera 250ms; se clicar em outro atalho antes disso, cancela o anterior
+  clearTimeout(quickTimer);
+  quickTimer = setTimeout(() => doSearch(true), 250);
+}
+
+// ── ABAS: acervo / gostei / talvez / não gostei ────
+function setView(view, btn) {
+  currentView = view;
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+
+  if (view === 'all') {
+    // volta pra busca normal
+    document.getElementById('loadMoreWrap').style.display =
+      shownCount < allResults.length ? 'block' : 'none';
+    document.getElementById('statusText').textContent =
+      (currentQuery && currentQuery !== 'sculpture') ? `"${currentQuery}"` : 'acervo completo';
+    document.getElementById('grid').innerHTML = '';
+    // re-renderiza os resultados já buscados
+    reRenderCurrentSearch();
+  } else {
+    renderView(view);
+  }
+}
+
+// re-renderiza a busca atual (usado ao voltar pra aba acervo)
+function reRenderCurrentSearch() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  const jaVistos = allResults.slice(0, shownCount);
+  jaVistos.forEach(obj => {
+    if (obj && obj.primaryImageSmall) grid.appendChild(buildCard(obj));
+  });
+  document.getElementById('loadMoreWrap').style.display =
+    shownCount < allResults.length ? 'block' : 'none';
+}
+
+// mostra os itens salvos de uma categoria
+function renderView(estado) {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  document.getElementById('loadMoreWrap').style.display = 'none';
+  document.getElementById('loading').style.display = 'none';
+
+  const itens = Object.values(ratings).filter(r => r.estado === estado);
+  const nomes = { like: 'gostei', maybe: 'talvez', nope: 'não gostei' };
+  document.getElementById('statusText').textContent = nomes[estado];
+  document.getElementById('countText').textContent = `${itens.length} salvos`;
+
+  if (itens.length === 0) {
+    document.getElementById('empty').style.display = 'block';
+    document.getElementById('empty').querySelector('p').textContent =
+      `nada em "${nomes[estado]}" ainda`;
+    return;
+  }
+  document.getElementById('empty').style.display = 'none';
+  itens.forEach(r => grid.appendChild(buildCard(r.obj)));
+}
+
+// ── AVALIAR PELO MODAL ─────────────────────────────
+function rateFromModal(estado) {
+  if (!modalObj) return;
+  setRating(modalObj, estado);
+}
+
+function syncModalButtons(id) {
+  const estado = getState(id);
+  ['like','maybe','nope'].forEach(e => {
+    const btn = document.getElementById('m' + e.charAt(0).toUpperCase() + e.slice(1));
+    if (btn) btn.className = 'm-rate-btn' + (estado === e ? ' on-' + e : '');
+  });
 }
 
 // ── MODAL: TODOS OS ÂNGULOS ────────────────────────
 function openModal(obj) {
-  const imgs = [];
-  if (obj.primaryImage) imgs.push(obj.primaryImage);
-  if (obj.additionalImages) imgs.push(...obj.additionalImages);
+  modalObj = obj;
 
   document.getElementById('modalTitle').textContent = obj.title || 'Sem título';
   document.getElementById('modalMeta').innerHTML = `
@@ -431,12 +744,62 @@ function openModal(obj) {
     <a href="${obj.objectURL}" target="_blank">ver no Met ↗</a> ·
     ID: ${obj.objectID}
   `;
-  document.getElementById('angleCount').textContent =
-    imgs.length > 1 ? `${imgs.length} ângulos disponíveis` : '1 imagem disponível';
 
+  // abre já com a primeira imagem (do cache)
+  const primeira = obj.primaryImage || obj.primaryImageSmall;
+  renderModalImages([primeira], obj);
+
+  const totalPrevisto = obj.n_angulos_cache || 1;
+  document.getElementById('angleCount').textContent =
+    totalPrevisto > 1
+      ? `carregando ${totalPrevisto} ângulos...`
+      : '1 imagem disponível';
+
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.querySelector('.modal-bg').scrollTop = 0;
+  syncModalButtons(obj.objectID);
+
+  // se já buscamos os ângulos antes, usa o cache em memória
+  if (obj.additionalImages) {
+    const todas = [primeira, ...obj.additionalImages];
+    renderModalImages(todas, obj);
+    document.getElementById('angleCount').textContent =
+      todas.length > 1 ? `${todas.length} ângulos disponíveis` : '1 imagem disponível';
+    return;
+  }
+
+  // senão, busca os ângulos no Met sob demanda (só esta peça = 1 chamada)
+  if (totalPrevisto > 1) {
+    const idAberto = obj.objectID;
+    fetch(`${MET}/objects/${obj.objectID}`)
+      .then(r => r.json())
+      .then(full => {
+        // guarda no objeto pra não buscar de novo
+        obj.additionalImages = full.additionalImages || [];
+        obj.primaryImage = full.primaryImage || primeira;
+        // só atualiza se o modal ainda está nesta peça
+        if (modalObj && modalObj.objectID === idAberto) {
+          const todas = [obj.primaryImage, ...obj.additionalImages];
+          renderModalImages(todas, obj);
+          document.getElementById('angleCount').textContent =
+            todas.length > 1 ? `${todas.length} ângulos disponíveis` : '1 imagem disponível';
+        }
+      })
+      .catch(() => {
+        if (modalObj && modalObj.objectID === idAberto) {
+          document.getElementById('angleCount').textContent = '1 imagem disponível';
+        }
+      });
+  }
+}
+
+// desenha as imagens (ângulos) na grade do modal
+function renderModalImages(imgs, obj) {
   const mg = document.getElementById('modalGrid');
   mg.innerHTML = '';
   imgs.forEach((url, i) => {
+    if (!url) return;
     const c = document.createElement('div');
     c.className = 'modal-card';
     const filename = `met_${obj.objectID}_${i === 0 ? 'principal' : 'angulo' + i}`;
@@ -448,11 +811,8 @@ function openModal(obj) {
       </div>`;
     mg.appendChild(c);
   });
-
-  document.getElementById('modal').classList.add('open');
-  document.body.style.overflow = 'hidden';
-  document.querySelector('.modal-bg').scrollTop = 0;
 }
+
 
 function closeModal() {
   document.getElementById('modal').classList.remove('open');
@@ -583,10 +943,11 @@ function toggleTheme() {
 // ── INIT ───────────────────────────────────────────
 window.addEventListener('load', () => {
   document.body.classList.add('mono'); // inicia em p&b
-  document.getElementById('searchInput').value = 'sculpture';
-  doSearch(true);
+  updateCounts();                      // mostra contadores salvos
+  document.getElementById('searchInput').value = '';
+  currentQuery = '';
+  doSearch(true);                      // carrega o acervo completo do banco
 });
 </script>
 </body>
 </html>
-
