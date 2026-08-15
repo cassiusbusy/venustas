@@ -141,7 +141,16 @@
     background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.55) 40%, rgba(0,0,0,0.15) 65%, transparent 80%);
     opacity: 0; transition: opacity 0.3s;
     display: flex; flex-direction: column; justify-content: flex-end; padding: 14px;
+    pointer-events: none;
   }
+  .card-overlay > * { pointer-events: auto; }
+  .ver-mais-btn {
+    background: var(--accent); border: none; color: var(--bg);
+    font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 1px;
+    padding: 9px 0; margin-bottom: 6px; cursor: pointer; width: 100%;
+    text-transform: uppercase; transition: background 0.15s; border-radius: 2px;
+  }
+  .ver-mais-btn:hover { background: #fff; color: #000; }
   .card:hover .card-overlay { opacity: 1; }
   .card-title {
     font-family: 'Cormorant Garamond', serif; font-size: 14px;
@@ -696,6 +705,7 @@ function buildCard(obj) {
       <span class="card-badge ${nAngles > 1 ? '' : 'mono'}">
         ${nAngles > 1 ? '◈ ' + nAngles + ' ângulos' : '1 foto'}
       </span>
+      <button class="ver-mais-btn" data-vermais>⇲ ver mais fotos</button>
       <div class="rate-row">
         <button class="rate-btn ${estado==='like'?'on-like':''}"   title="gostei"     data-r="like">♥</button>
         <button class="rate-btn ${estado==='maybe'?'on-maybe':''}" title="talvez"     data-r="maybe">◐</button>
@@ -703,7 +713,12 @@ function buildCard(obj) {
       </div>
     </div>`;
 
-  // clique na imagem/título abre o modal
+  // botão "ver mais fotos" abre o modal
+  card.querySelector('[data-vermais]').onclick = (e) => {
+    e.stopPropagation();
+    openModal(obj);
+  };
+  // clicar na imagem também abre (fallback)
   card.querySelector('img').onclick = () => openModal(obj);
   card.querySelector('.card-title').onclick = () => openModal(obj);
 
