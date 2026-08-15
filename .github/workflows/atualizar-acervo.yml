@@ -1,0 +1,40 @@
+name: Atualizar Acervo
+
+# Quando roda:
+on:
+  schedule:
+    # toda segunda-feira às 08:00 UTC (05:00 no horário de Brasília)
+    - cron: '0 8 * * 1'
+  workflow_dispatch:  # botão manual: permite rodar quando quiser pelo GitHub
+
+# Permissão pra gravar o acervo.json de volta no repositório
+permissions:
+  contents: write
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Rodar o atualizador
+        run: python atualizar_acervo.py
+
+      - name: Salvar mudanças no acervo.json
+        run: |
+          git config user.name  "github-actions"
+          git config user.email "github-actions@github.com"
+          git add acervo.json
+          # só faz commit se houve mudança
+          if git diff --staged --quiet; then
+            echo "Nada novo no acervo."
+          else
+            git commit -m "Atualiza acervo (automático)"
+            git push
+          fi
