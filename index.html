@@ -983,11 +983,14 @@ function renderModalImages(imgs, obj) {
   mg.innerHTML = '';
   imgs.forEach((url, i) => {
     if (!url) return;
+    // versão leve pra EXIBIR (web-large ~200KB em vez de original ~20MB)
+    const urlLeve = url.replace('/original/', '/web-large/');
     const c = document.createElement('div');
     c.className = 'modal-card';
     const filename = `met_${obj.objectID}_${i === 0 ? 'principal' : 'angulo' + i}`;
     c.innerHTML = `
-      <img src="${url}" alt="ângulo ${i+1}" loading="lazy" crossorigin="anonymous">
+      <img src="${urlLeve}" alt="ângulo ${i+1}" loading="lazy"
+           onerror="this.onerror=null; this.src='${url}'">
       <div class="modal-card-actions">
         <button class="dl-btn" onclick="smartDownload('${url}', '${filename}')">↓ baixar</button>
         <button class="dl-btn sec" onclick="copyUrl('${url}')">copiar url</button>
