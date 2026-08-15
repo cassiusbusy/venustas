@@ -1,6 +1,6 @@
 
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -278,6 +278,7 @@
     font-family: 'Cormorant Garamond', serif; font-style: italic;
     font-size: 22px; text-align: center; padding: 20px;
     opacity: 0; transition: opacity 0.4s;
+    pointer-events: none;
   }
   #easterEgg:hover .egg-msg { opacity: 1; }
 
@@ -807,53 +808,53 @@ function openModal(obj) {
     ID: ${obj.objectID}
   `;
 
-  // abre já com a primeira imagem (do cache)
+  // abre já com a primeira imagem (instantâneo)
   const primeira = obj.primaryImage || obj.primaryImageSmall;
   renderModalImages([primeira], obj);
-
-  const totalPrevisto = obj.n_angulos_cache || 1;
-  document.getElementById('angleCount').textContent =
-    totalPrevisto > 1
-      ? `carregando ${totalPrevisto} ângulos...`
-      : '1 imagem disponível';
+  document.getElementById('angleCount').textContent = 'procurando outros ângulos...';
 
   document.getElementById('modal').classList.add('open');
   document.body.style.overflow = 'hidden';
   document.querySelector('.modal-bg').scrollTop = 0;
   syncModalButtons(obj.objectID);
 
-  // se já buscamos os ângulos antes, usa o cache em memória
+  // a surpresa não existe no Met — mostra só a própria imagem, sem buscar ângulos
+  if (obj._isEgg) {
+    document.getElementById('angleCount').textContent = '1 imagem disponível';
+    return;
+  }
+
+  // se já buscamos os ângulos antes nesta sessão, usa o que está em memória
   if (obj.additionalImages) {
-    const todas = [primeira, ...obj.additionalImages];
+    const todas = [obj.primaryImage || primeira, ...obj.additionalImages];
     renderModalImages(todas, obj);
     document.getElementById('angleCount').textContent =
       todas.length > 1 ? `${todas.length} ângulos disponíveis` : '1 imagem disponível';
     return;
   }
 
-  // senão, busca os ângulos no Met sob demanda (só esta peça = 1 chamada)
-  if (totalPrevisto > 1) {
-    const idAberto = obj.objectID;
-    fetch(`${MET}/objects/${obj.objectID}`)
-      .then(r => r.json())
-      .then(full => {
-        // guarda no objeto pra não buscar de novo
-        obj.additionalImages = full.additionalImages || [];
-        obj.primaryImage = full.primaryImage || primeira;
-        // só atualiza se o modal ainda está nesta peça
-        if (modalObj && modalObj.objectID === idAberto) {
-          const todas = [obj.primaryImage, ...obj.additionalImages];
-          renderModalImages(todas, obj);
-          document.getElementById('angleCount').textContent =
-            todas.length > 1 ? `${todas.length} ângulos disponíveis` : '1 imagem disponível';
-        }
-      })
-      .catch(() => {
-        if (modalObj && modalObj.objectID === idAberto) {
-          document.getElementById('angleCount').textContent = '1 imagem disponível';
-        }
-      });
-  }
+  // SEMPRE busca os ângulos no Met ao abrir (não confia no n_angulos salvo).
+  // Assim, mesmo que o acervo diga "1 ângulo", se a peça tiver mais no Met,
+  // eles aparecem. E se o dado salvo estiver errado, corrige na hora.
+  document.getElementById('angleCount').textContent = 'procurando outros ângulos...';
+  const idAberto = obj.objectID;
+  fetch(`${MET}/objects/${obj.objectID}`)
+    .then(r => r.json())
+    .then(full => {
+      obj.additionalImages = full.additionalImages || [];
+      obj.primaryImage = full.primaryImage || primeira;
+      if (modalObj && modalObj.objectID === idAberto) {
+        const todas = [obj.primaryImage, ...obj.additionalImages].filter(Boolean);
+        renderModalImages(todas, obj);
+        document.getElementById('angleCount').textContent =
+          todas.length > 1 ? `${todas.length} ângulos disponíveis` : '1 imagem disponível';
+      }
+    })
+    .catch(() => {
+      if (modalObj && modalObj.objectID === idAberto) {
+        document.getElementById('angleCount').textContent = '1 imagem disponível';
+      }
+    });
 }
 
 // desenha as imagens (ângulos) na grade do modal
@@ -1019,30 +1020,70 @@ const EGG_MSG = 'Platōnikòs érōs éoiken, ei dè kairòn eîkhon';
 let eggJaApareceu = false;
 
 function avaliarEasterEgg(cat) {
-  // aparece só em deusas ou anjos, e só uma vez por sessão
-  if ((cat === 'deusas' || cat === 'anjos') && !eggJaApareceu) {
+  // aparece em deusas, anjos ou atletas, e só uma vez por sessão
+  if ((cat === 'deusas' || cat === 'anjos' || cat === 'atletas') && !eggJaApareceu) {
     mostrarEasterEgg();
   }
 }
+
+// objeto que representa a surpresa como uma "peça" avaliável
+const EGG_OBJ = {
+  objectID: 'egg-surpresa',
+  title: 'A Corredora (The Runner), 2024',
+  artistDisplayName: 'surpresa',
+  objectDate: '2024',
+  medium: 'Mármore',
+  objectName: 'Statue',
+  categoria: 'atletas',
+  objectURL: '',
+  primaryImageSmall: EGG_IMG,
+  primaryImage: EGG_IMG,
+  n_angulos_cache: 1,
+  additionalImages: [],
+  _isEgg: true
+};
 
 function mostrarEasterEgg() {
   eggJaApareceu = true;
   const grid = document.getElementById('grid');
   if (!grid) return;
 
-  const egg = document.createElement('div');
+  // usa o mesmo card das outras peças (já traz botões de avaliação)
+  const egg = buildCard(EGG_OBJ);
   egg.id = 'easterEgg';
-  egg.className = 'card show';
-  egg.innerHTML = `
-    <img src="${EGG_IMG}" alt="?" onerror="this.closest('#easterEgg').remove()">
-    <div class="egg-msg">${EGG_MSG}</div>`;
-  egg.onclick = () => {
-    track('easter_egg', { acao: 'clicou_sumiu' });
-    egg.style.transition = 'opacity 0.5s, transform 0.5s';
-    egg.style.opacity = '0';
-    egg.style.transform = 'scale(0.9)';
-    setTimeout(() => egg.remove(), 500);
-  };
+  egg.classList.add('show');
+
+  // adiciona a mensagem secreta por cima (mouseover)
+  const msg = document.createElement('div');
+  msg.className = 'egg-msg';
+  msg.textContent = EGG_MSG;
+  egg.appendChild(msg);
+
+  // evento: leu a mensagem secreta (passou o mouse) — dispara só uma vez
+  let mouseoverContado = false;
+  egg.addEventListener('mouseenter', () => {
+    if (!mouseoverContado) {
+      mouseoverContado = true;
+      track('surpresa_mouseover', { acao: 'leu_mensagem' });
+    }
+  });
+
+  // substitui o clique dos botões de avaliação: avalia, taguea e SOME
+  egg.querySelectorAll('.rate-btn').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const tipo = btn.dataset.r; // like | maybe | nope
+      track('surpresa_avaliacao', { avaliacao: tipo });
+      setRating(EGG_OBJ, tipo);   // guarda no sistema normal (entra nas abas)
+      // some com animação
+      egg.style.transition = 'opacity 0.6s, transform 0.6s';
+      egg.style.opacity = '0';
+      egg.style.transform = 'scale(0.9)';
+      setTimeout(() => egg.remove(), 600);
+    };
+  });
+
+  track('easter_egg', { acao: 'apareceu' });
 
   // insere numa posição aleatória entre os cards já visíveis
   const cards = grid.querySelectorAll('.card');
@@ -1052,7 +1093,6 @@ function mostrarEasterEgg() {
   } else {
     grid.appendChild(egg);
   }
-  track('easter_egg', { acao: 'apareceu' });
 }
 
 // ── PROFUNDIDADE DE ROLAGEM ────────────────────────
