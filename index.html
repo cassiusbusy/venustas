@@ -138,7 +138,7 @@
   body.mono .modal-card img { filter: grayscale(100%) contrast(1.05); }
   .card-overlay {
     position: absolute; inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.1) 45%, transparent 70%);
+    background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.55) 40%, rgba(0,0,0,0.15) 65%, transparent 80%);
     opacity: 0; transition: opacity 0.3s;
     display: flex; flex-direction: column; justify-content: flex-end; padding: 14px;
   }
@@ -285,14 +285,14 @@
   /* ── AVALIAÇÃO ── */
   .rate-row { display: flex; gap: 5px; margin-top: 8px; }
   .rate-btn {
-    flex: 1; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.15);
-    color: var(--text); font-family: 'Space Mono', monospace; font-size: 13px;
-    padding: 6px 0; cursor: pointer; transition: all 0.15s; border-radius: 2px;
+    flex: 1; background: rgba(20,20,20,0.9); border: 1px solid rgba(255,255,255,0.35);
+    color: #fff; font-family: 'Space Mono', monospace; font-size: 15px;
+    padding: 8px 0; cursor: pointer; transition: all 0.15s; border-radius: 2px;
   }
-  .rate-btn:hover { border-color: var(--accent); }
-  .rate-btn.on-like    { background: #2e7d4f; border-color: #2e7d4f; }
-  .rate-btn.on-maybe   { background: #b8891f; border-color: #b8891f; }
-  .rate-btn.on-nope    { background: #a13d3d; border-color: #a13d3d; }
+  .rate-btn:hover { border-color: #fff; background: rgba(40,40,40,0.95); }
+  .rate-btn.on-like    { background: #2e7d4f; border-color: #4bbd77; }
+  .rate-btn.on-maybe   { background: #b8891f; border-color: #e0aa3c; }
+  .rate-btn.on-nope    { background: #a13d3d; border-color: #cf5b5b; }
 
   /* selo de status no canto do card */
   .rate-flag {
@@ -406,6 +406,9 @@
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="angle-count" id="angleCount"></div>
+    <div style="margin-bottom:16px">
+      <button class="m-rate-btn" id="btnMaisFotos" onclick="buscarMaisFotos()">⇲ buscar mais fotos desta peça</button>
+    </div>
     <div class="modal-rate">
       <span class="modal-rate-label">o que achou?</span>
       <button class="m-rate-btn" id="mLike"  onclick="rateFromModal('like')">♥ gostei</button>
@@ -571,6 +574,69 @@ function doSearch(reset = true) {
     currentCategoria ? currentCategoria
     : (q ? `"${q}"` : 'acervo completo');
   if (q) track('busca', { termo: q, resultados: allResults.length });
+
+  // ACERVO MISTO: se há busca por texto, também busca ao vivo no Met
+  // e acrescenta o que não estiver já no acervo local
+  if (q && q.length >= 2) {
+    buscarNoMetAoVivo(q, meuToken);
+  }
+}
+
+// busca ao vivo no Met e acrescenta resultados novos à galeria
+async function buscarNoMetAoVivo(termo, meuToken) {
+  const statusEl = document.getElementById('statusText');
+  const textoOriginal = statusEl.textContent;
+  statusEl.textContent = textoOriginal + ' + buscando no Met...';
+
+  try {
+    const url = `${MET}/search?hasImages=true&q=${encodeURIComponent(termo)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (meuToken !== searchToken) return;  // busca mudou, aborta
+
+    let ids = data.objectIDs || [];
+    // ignora os que já estão nos resultados atuais
+    const jaTem = new Set(allResults.map(r => r.objectID));
+    ids = ids.filter(id => !jaTem.has(id)).slice(0, 30);  // limita a 30 novos
+
+    if (ids.length === 0) {
+      statusEl.textContent = textoOriginal;
+      return;
+    }
+
+    // busca os detalhes de cada peça
+    const objetos = await Promise.all(
+      ids.map(id => fetch(`${MET}/objects/${id}`).then(r => r.json()).catch(() => null))
+    );
+    if (meuToken !== searchToken) return;
+
+    const novos = objetos.filter(o => o && o.primaryImageSmall && !jaTem.has(o.objectID));
+    // acrescenta aos resultados e renderiza
+    const grid = document.getElementById('grid');
+    novos.forEach(o => {
+      const obj = {
+        objectID: o.objectID,
+        title: o.title,
+        artistDisplayName: o.artistDisplayName,
+        objectDate: o.objectDate,
+        medium: o.medium,
+        objectName: o.objectName,
+        categoria: '',
+        objectURL: o.objectURL,
+        primaryImageSmall: o.primaryImageSmall,
+        primaryImage: o.primaryImage,
+        n_angulos_cache: 1 + (o.additionalImages ? o.additionalImages.length : 0),
+        additionalImages: o.additionalImages || null
+      };
+      allResults.push(obj);
+      grid.appendChild(buildCard(obj));
+    });
+
+    statusEl.textContent = `${textoOriginal.replace(' + buscando no Met...','')} · +${novos.length} do Met`;
+    document.getElementById('countText').textContent = `${allResults.length} esculturas`;
+  } catch(e) {
+    statusEl.textContent = textoOriginal;
+  }
 }
 
 // converte um registro do acervo no formato usado pelos cards/modal
@@ -854,6 +920,45 @@ function openModal(obj) {
       if (modalObj && modalObj.objectID === idAberto) {
         document.getElementById('angleCount').textContent = '1 imagem disponível';
       }
+    });
+}
+
+// botão "buscar mais fotos desta peça" — reconsulta o Met e traz TODAS as imagens
+function buscarMaisFotos() {
+  if (!modalObj) return;
+  const obj = modalObj;
+  const btn = document.getElementById('btnMaisFotos');
+  const idAberto = obj.objectID;
+
+  // a surpresa não existe no Met
+  if (obj._isEgg) {
+    document.getElementById('angleCount').textContent = 'esta é uma peça especial — só 1 imagem';
+    return;
+  }
+
+  track('buscar_mais_fotos', { id: obj.objectID, titulo: obj.title || '' });
+  btn.textContent = '⇲ buscando...';
+  btn.disabled = true;
+  document.getElementById('angleCount').textContent = 'buscando todas as fotos no Met...';
+
+  fetch(`${MET}/objects/${obj.objectID}`)
+    .then(r => r.json())
+    .then(full => {
+      obj.additionalImages = full.additionalImages || [];
+      obj.primaryImage = full.primaryImage || obj.primaryImage;
+      if (modalObj && modalObj.objectID === idAberto) {
+        const todas = [obj.primaryImage, ...obj.additionalImages].filter(Boolean);
+        renderModalImages(todas, obj);
+        document.getElementById('angleCount').textContent =
+          todas.length > 1 ? `${todas.length} fotos disponíveis` : 'só 1 foto disponível para esta peça';
+      }
+    })
+    .catch(() => {
+      document.getElementById('angleCount').textContent = 'não foi possível buscar mais fotos';
+    })
+    .finally(() => {
+      btn.textContent = '⇲ buscar mais fotos desta peça';
+      btn.disabled = false;
     });
 }
 
