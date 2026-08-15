@@ -4,6 +4,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VPY42R3DF4"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-VPY42R3DF4');
+</script>
 <title>Venustas & Tímpano — banco de esculturas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -249,6 +257,30 @@
   }
   .info-bar a { color: var(--accent2); text-decoration: none; }
 
+  /* ── EASTER EGG (imagem surpresa) ── */
+  #easterEgg {
+    display: none;
+    position: relative;
+    break-inside: avoid;
+    margin-bottom: 12px;
+    cursor: pointer;
+    overflow: hidden;
+    border: 1px solid var(--accent);
+  }
+  #easterEgg.show { display: block; animation: eggIn 0.8s ease; }
+  @keyframes eggIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+  #easterEgg img { width: 100%; display: block; filter: grayscale(100%) contrast(1.05); }
+  #easterEgg .egg-msg {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(10,10,10,0.82);
+    color: var(--accent);
+    font-family: 'Cormorant Garamond', serif; font-style: italic;
+    font-size: 22px; text-align: center; padding: 20px;
+    opacity: 0; transition: opacity 0.4s;
+  }
+  #easterEgg:hover .egg-msg { opacity: 1; }
+
   /* ── AVALIAÇÃO ── */
   .rate-row { display: flex; gap: 5px; margin-top: 8px; }
   .rate-btn {
@@ -387,6 +419,15 @@
 
 <script>
 // ════════════════════════════════════════════════════
+//  ANALYTICS — envia eventos pro Google Analytics
+// ════════════════════════════════════════════════════
+function track(evento, dados) {
+  try {
+    if (typeof gtag === 'function') gtag('event', evento, dados || {});
+  } catch(e) {}
+}
+
+// ════════════════════════════════════════════════════
 //  ACERVO — arquivo local (acervo.json), servido junto ao site
 //  Nunca trava, nunca pausa. Curado só com esculturas clássicas.
 // ════════════════════════════════════════════════════
@@ -444,8 +485,10 @@ function setRating(obj, estado) {
   const id = obj.objectID;
   if (ratings[id] && ratings[id].estado === estado) {
     delete ratings[id];             // clicou de novo = tira
+    track('avaliacao', { acao: 'removeu', estado: estado, id: id });
   } else {
     ratings[id] = { estado, obj: slimObj(obj) };
+    track('avaliacao', { acao: 'marcou', estado: estado, id: id });
   }
   saveRatings(ratings);
   updateCounts();
@@ -525,6 +568,7 @@ function doSearch(reset = true) {
   document.getElementById('statusText').textContent =
     currentCategoria ? currentCategoria
     : (q ? `"${q}"` : 'acervo completo');
+  if (q) track('busca', { termo: q, resultados: allResults.length });
 }
 
 // converte um registro do acervo no formato usado pelos cards/modal
@@ -674,7 +718,10 @@ function selecionarCategoria(cat, btn) {
   if (btn) btn.classList.add('active');
   // limpa a busca de texto ao trocar de categoria
   document.getElementById('searchInput').value = '';
+  track('categoria_clicada', { categoria: cat || 'todas' });
   doSearch(true);
+  // easter egg aparece nas categorias deusas e anjos
+  avaliarEasterEgg(cat);
 }
 
 // ── ABAS: acervo / gostei / talvez / não gostei ────
@@ -748,6 +795,7 @@ function syncModalButtons(id) {
 // ── MODAL: TODOS OS ÂNGULOS ────────────────────────
 function openModal(obj) {
   modalObj = obj;
+  track('escultura_aberta', { id: obj.objectID, titulo: obj.title || '', categoria: obj.categoria || '' });
 
   document.getElementById('modalTitle').textContent = obj.title || 'Sem título';
   document.getElementById('modalMeta').innerHTML = `
@@ -869,6 +917,7 @@ document.getElementById('modal').addEventListener('click', e => {
 // Se modo P&B estiver ligado, gera a versão preto-e-branco de verdade
 // via canvas. Se estiver colorido, baixa o original direto.
 async function smartDownload(url, filename) {
+  track('download', { modo: monoOn ? 'pb' : 'cor' });
   // Modo colorido: baixa o original direto
   if (!monoOn) {
     baixarDireto(url, filename + '.jpg');
@@ -943,6 +992,7 @@ function toggleMono() {
     document.body.classList.remove('mono');
     btn.textContent = '◐ cor';
   }
+  track('troca_cor', { modo: monoOn ? 'pb' : 'cor' });
 }
 
 // ── TEMA ───────────────────────────────────────────
@@ -957,7 +1007,71 @@ function toggleTheme() {
     root.setAttribute('data-theme', 'light');
     btn.textContent = '☀ claro';
   }
+  track('troca_tema', { tema: isLight ? 'escuro' : 'claro' });
 }
+
+// ── EASTER EGG (imagem surpresa em "deusas" e "anjos") ──
+// A imagem fica na pasta /surpresas do repositório.
+const EGG_IMG = 'surpresas/surpresa.jpg';
+// trocadilho pseudo-grego: "largaria tudo por você"
+const EGG_MSG = 'λαργαρία τudo por você';
+let eggJaApareceu = false;
+
+function avaliarEasterEgg(cat) {
+  // aparece só em deusas ou anjos, e só uma vez por sessão
+  if ((cat === 'deusas' || cat === 'anjos') && !eggJaApareceu) {
+    mostrarEasterEgg();
+  }
+}
+
+function mostrarEasterEgg() {
+  eggJaApareceu = true;
+  const grid = document.getElementById('grid');
+  if (!grid) return;
+
+  const egg = document.createElement('div');
+  egg.id = 'easterEgg';
+  egg.className = 'card show';
+  egg.innerHTML = `
+    <img src="${EGG_IMG}" alt="?" onerror="this.closest('#easterEgg').remove()">
+    <div class="egg-msg">${EGG_MSG}</div>`;
+  egg.onclick = () => {
+    track('easter_egg', { acao: 'clicou_sumiu' });
+    egg.style.transition = 'opacity 0.5s, transform 0.5s';
+    egg.style.opacity = '0';
+    egg.style.transform = 'scale(0.9)';
+    setTimeout(() => egg.remove(), 500);
+  };
+
+  // insere numa posição aleatória entre os cards já visíveis
+  const cards = grid.querySelectorAll('.card');
+  if (cards.length > 2) {
+    const pos = 1 + Math.floor(Math.random() * (cards.length - 1));
+    grid.insertBefore(egg, cards[pos]);
+  } else {
+    grid.appendChild(egg);
+  }
+  track('easter_egg', { acao: 'apareceu' });
+}
+
+// ── PROFUNDIDADE DE ROLAGEM ────────────────────────
+const marcosScroll = { '25': false, '50': false, '75': false, '100': false };
+function checarScroll() {
+  const h = document.documentElement;
+  const total = h.scrollHeight - h.clientHeight;
+  if (total <= 0) return;
+  const pct = (h.scrollTop / total) * 100;
+  [25, 50, 75, 100].forEach(m => {
+    if (pct >= m && !marcosScroll[m]) {
+      marcosScroll[m] = true;
+      track('rolagem', { profundidade: m + '%' });
+    }
+  });
+}
+window.addEventListener('scroll', () => {
+  clearTimeout(window._scrollT);
+  window._scrollT = setTimeout(checarScroll, 200);
+});
 
 // ── INIT ───────────────────────────────────────────
 window.addEventListener('load', async () => {
