@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
@@ -11,7 +12,7 @@
   gtag('js', new Date());
   gtag('config', 'G-VPY42R3DF4');
 </script>
-<title>Venustas & Tímpano | banco de esculturas</title>
+<title>Venustas & Tímpano — banco de esculturas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -135,7 +136,9 @@
   .card:hover img { transform: scale(1.04); }
   body.mono .card img,
   body.mono .modal-card img { filter: grayscale(100%) contrast(1.05); }
+  /* quando o modal está em "foto original", força colorido mesmo com body.mono */
   #modalGrid.modal-original .modal-card img { filter: none !important; }
+  /* quando em "efeito mármore", força P&B mesmo se o site estiver colorido */
   #modalGrid.modal-marmore .modal-card img { filter: grayscale(100%) contrast(1.05) !important; }
   .card-overlay {
     position: absolute; inset: 0;
@@ -272,7 +275,7 @@
   }
   .info-bar a { color: var(--accent2); text-decoration: none; }
 
-  /* AVALIAÇÃO */
+  /* ── AVALIAÇÃO ── */
   .rate-row { display: flex; gap: 5px; margin-top: 8px; }
   .rate-btn {
     flex: 1; background: rgba(20,20,20,0.9); border: 1px solid rgba(255,255,255,0.35);
@@ -284,6 +287,7 @@
   .rate-btn.on-maybe   { background: #b8891f; border-color: #e0aa3c; }
   .rate-btn.on-nope    { background: #a13d3d; border-color: #cf5b5b; }
 
+  /* selo de status no canto do card */
   .rate-flag {
     position: absolute; top: 8px; left: 8px; z-index: 3;
     font-size: 14px; width: 26px; height: 26px; border-radius: 50%;
@@ -295,6 +299,7 @@
   .rate-flag.f-maybe { background: #b8891f; }
   .rate-flag.f-nope  { background: #a13d3d; }
 
+  /* abas */
   .tabs-bar {
     display: flex; gap: 0; margin-bottom: 24px; flex-wrap: wrap;
     border-bottom: 1px solid var(--border);
@@ -313,6 +318,7 @@
   }
   .view-tab.active .cnt { background: var(--accent); color: var(--bg); }
 
+  /* avaliação dentro do modal */
   .modal-rate {
     display: flex; gap: 8px; margin-bottom: 24px; align-items: center; flex-wrap: wrap;
   }
@@ -356,7 +362,9 @@
 
 <div class="hero">
   <div class="hero-title">escultura em mármore</div>
-  <div class="hero-tags" id="heroTags"></div>
+  <div class="hero-tags" id="heroTags">
+    <!-- categorias inseridas via JS a partir do acervo -->
+  </div>
 </div>
 
 <div class="main">
@@ -408,25 +416,39 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ════════════════════════════════════════════════════
+//  ANALYTICS — envia eventos pro Google Analytics
+// ════════════════════════════════════════════════════
 function track(evento, dados) {
   try {
     if (typeof gtag === 'function') gtag('event', evento, dados || {});
   } catch(e) {}
 }
 
-let ACERVO = [];
+// ════════════════════════════════════════════════════
+//  ACERVO — arquivo local (acervo.json), servido junto ao site
+//  Nunca trava, nunca pausa. Curado só com esculturas clássicas.
+// ════════════════════════════════════════════════════
+let ACERVO = [];          // carregado do acervo.json no início
 let CATEGORIAS = [];
 const ACERVO_EMBUTIDO = {"gerado_em": "2026", "fonte": "The Metropolitan Museum of Art (CC0) — marmore de todas as colecoes", "categorias": ["anjos", "deusas", "deuses", "atletas", "bustos", "cabecas", "relevos", "sarcofagos", "figuras"], "esculturas": [{"met_id": 253368, "titulo": "Marble statue of a wounded Amazon", "artista": "Roman", "data_obj": "A.D. 138-181", "material": "Marble", "tipo": "Statue", "categoria": "deusas", "thumb": "https://images.metmuseum.org/CRDImages/gr/web-large/DT1080.jpg", "imagem_full": "https://images.metmuseum.org/CRDImages/gr/original/DT1080.jpg", "n_angulos": 6, "object_url": "https://www.metmuseum.org/art/collection/search/253368"}, {"met_id": 256505, "titulo": "Marble head of Athena", "artista": "Roman", "data_obj": "1st-2nd century A.D.", "material": "Marble", "tipo": "Head", "categoria": "deusas", "thumb": "https://images.metmuseum.org/CRDImages/gr/web-large/DP-14201-001.jpg", "imagem_full": "https://images.metmuseum.org/CRDImages/gr/original/DP-14201-001.jpg", "n_angulos": 3, "object_url": "https://www.metmuseum.org/art/collection/search/256505"}, {"met_id": 250216, "titulo": "Marble head and torso of Athena", "artista": "Roman", "data_obj": "1st century A.D.", "material": "Marble", "tipo": "Statue", "categoria": "deusas", "thumb": "https://images.metmuseum.org/CRDImages/gr/web-large/DP336166.jpg", "imagem_full": "https://images.metmuseum.org/CRDImages/gr/original/DP336166.jpg", "n_angulos": 4, "object_url": "https://www.metmuseum.org/art/collection/search/250216"}, {"met_id": 248348, "titulo": "Marble statue group of the Three Graces", "artista": "Roman", "data_obj": "2nd century A.D.", "material": "Marble", "tipo": "Statue", "categoria": "deusas", "thumb": "https://images.metmuseum.org/CRDImages/gr/web-large/DP345239.jpg", "imagem_full": "https://images.metmuseum.org/CRDImages/gr/original/DP345239.jpg", "n_angulos": 6, "object_url": "https://www.metmuseum.org/art/collection/search/248348"}, {"met_id": 247009, "titulo": "Marble statue of a member of the imperial family", "artista": "Roman", "data_obj": "A.D. 27-68", "material": "Marble", "tipo": "Statue", "categoria": "deuses", "thumb": "https://images.metmuseum.org/CRDImages/gr/web-large/DP230485.jpg", "imagem_full": "https://images.metmuseum.org/CRDImages/gr/original/DP230485.jpg", "n_angulos": 5, "object_url": "https://www.metmuseum.org/art/collection/search/247009"}, {"met_id": 254597, "titulo": "Marble statue of a kouros (youth)", "artista": "Greek, Attic", "data_obj": "ca. 590-580 B.C.", "material": "Marble, Naxian", "tipo": "Statue", "categoria": "figuras", "thumb": "https://images.metmuseum.org/CRDImages/gr/web-large/DP348617.jpg", "imagem_full": "https://images.metmuseum.org/CRDImages/gr/original/DP348617.jpg", "n_angulos": 8, "object_url": "https://www.metmuseum.org/art/collection/search/254597"}, {"met_id": 247993, "titulo": "Marble head of a Greek general", "artista": "Roman", "data_obj": "A.D. 138-192", "material": "Marble", "tipo": "Head", "categoria": "cabecas", "thumb": "https://images.metmuseum.org/CRDImages/gr/web-large/DP345236.jpg", "imagem_full": "https://images.metmuseum.org/CRDImages/gr/original/DP345236.jpg", "n_angulos": 4, "object_url": "https://www.metmuseum.org/art/collection/search/247993"}, {"met_id": 251380, "titulo": "Marble portrait of the emperor Caracalla", "artista": "Roman", "data_obj": "A.D. 212-217", "material": "Marble", "tipo": "Bust", "categoria": "bustos", "thumb": "https://images.metmuseum.org/CRDImages/gr/web-large/DP247959.jpg", "imagem_full": "https://images.metmuseum.org/CRDImages/gr/original/DP247959.jpg", "n_angulos": 7, "object_url": "https://www.metmuseum.org/art/collection/search/251380"}, {"met_id": 255558, "titulo": "Marble portrait bust of a man", "artista": "Roman", "data_obj": "mid-3rd century A.D.", "material": "Marble", "tipo": "Bust", "categoria": "bustos", "thumb": "https://images.metmuseum.org/CRDImages/gr/web-large/DP247962.jpg", "imagem_full": "https://images.metmuseum.org/CRDImages/gr/original/DP247962.jpg", "n_angulos": 4, "object_url": "https://www.metmuseum.org/art/collection/search/255558"}, {"met_id": 247017, "titulo": "Marble statue of an old woman", "artista": "Roman", "data_obj": "A.D. 14-68", "material": "Marble", "tipo": "Statue", "categoria": "figuras", "thumb": "https://images.metmuseum.org/CRDImages/gr/web-large/DP142184.jpg", "imagem_full": "https://images.metmuseum.org/CRDImages/gr/original/DP142184.jpg", "n_angulos": 5, "object_url": "https://www.metmuseum.org/art/collection/search/247017"}, {"met_id": 247996, "titulo": "Marble sarcophagus with the Triumph of Dionysos", "artista": "Roman", "data_obj": "ca. A.D. 260-270", "material": "Marble", "tipo": "Sarcophagus", "categoria": "sarcofagos", "thumb": "https://images.metmuseum.org/CRDImages/gr/web-large/DP-891-001.jpg", "imagem_full": "https://images.metmuseum.org/CRDImages/gr/original/DP-891-001.jpg", "n_angulos": 8, "object_url": "https://www.metmuseum.org/art/collection/search/247996"}, {"met_id": 204758, "titulo": "Ugolino and His Sons", "artista": "Jean-Baptiste Carpeaux", "data_obj": "1865-67", "material": "Saint-Beat marble", "tipo": "Statue", "categoria": "figuras", "thumb": "https://images.metmuseum.org/CRDImages/es/web-large/DP-1409-001.jpg", "imagem_full": "https://images.metmuseum.org/CRDImages/es/original/DP-1409-001.jpg", "n_angulos": 10, "object_url": "https://www.metmuseum.org/art/collection/search/204758"}, {"met_id": 190483, "titulo": "Andromeda and the Sea Monster", "artista": "Domenico Guidi", "data_obj": "1694", "material": "Marble", "tipo": "Group", "categoria": "figuras", "thumb": "https://images.metmuseum.org/CRDImages/es/web-large/DP237121.jpg", "imagem_full": "https://images.metmuseum.org/CRDImages/es/original/DP237121.jpg", "n_angulos": 6, "object_url": "https://www.metmuseum.org/art/collection/search/190483"}, {"met_id": 191490, "titulo": "Bust of a Young Woman", "artista": "Style of Antonio Rossellino", "data_obj": "19th century", "material": "Marble", "tipo": "Bust", "categoria": "bustos", "thumb": "https://images.metmuseum.org/CRDImages/es/web-large/DP-13191-001.jpg", "imagem_full": "https://images.metmuseum.org/CRDImages/es/original/DP-13191-001.jpg", "n_angulos": 4, "object_url": "https://www.metmuseum.org/art/collection/search/191490"}]};
 
+// ════════════════════════════════════════════════════
+//  MET MUSEUM API — usada só ao abrir uma peça (ângulos)
+// ════════════════════════════════════════════════════
 const MET = 'https://collectionapi.metmuseum.org/public/collection/v1';
 const PER_PAGE = 25;
 
-let shownCount = 0;
+let shownCount = 0;    // quantos já foram renderizados
 let currentQuery = 'sculpture';
-let currentView = 'all';
-let modalObj = null;
-let searchToken = 0;
+let currentView = 'all';   // aba ativa: all | like | maybe | nope
+let modalObj = null;       // objeto aberto no modal
+let searchToken = 0;       // identifica a busca mais recente (anti-corrida)
 
+// ════════════════════════════════════════════════════
+//  AVALIAÇÕES — salvas no navegador (localStorage)
+//  Estrutura: { "<id>": { estado:'like|maybe|nope', obj:{...} } }
+// ════════════════════════════════════════════════════
 const STORE_KEY = 'venustas_ratings';
 
 function loadRatings() {
@@ -438,6 +460,7 @@ function saveRatings(r) {
 }
 let ratings = loadRatings();
 
+// guarda um resumo leve do objeto pra poder mostrar nas abas depois
 function slimObj(obj) {
   return {
     objectID: obj.objectID,
@@ -456,10 +479,11 @@ function getState(id) {
   return ratings[id] ? ratings[id].estado : null;
 }
 
+// define/remove avaliação. Clicar no mesmo estado desmarca.
 function setRating(obj, estado) {
   const id = obj.objectID;
   if (ratings[id] && ratings[id].estado === estado) {
-    delete ratings[id];
+    delete ratings[id];             // clicou de novo = tira
     track('avaliacao', { acao: 'removeu', estado: estado, id: id });
   } else {
     ratings[id] = { estado, obj: slimObj(obj) };
@@ -469,6 +493,7 @@ function setRating(obj, estado) {
   updateCounts();
   refreshCardFlag(id);
   if (modalObj && modalObj.objectID === id) syncModalButtons(id);
+  // se estamos numa aba filtrada, re-renderiza pra sumir/aparecer
   if (currentView !== 'all') renderView(currentView);
 }
 
@@ -484,8 +509,9 @@ function updateCounts() {
   document.getElementById('cntNope').textContent = n;
 }
 
-let allResults = [];
-let currentCategoria = null;
+// ── BUSCA (filtra o acervo local — instantâneo) ────
+let allResults = [];      // resultados da busca/filtro atual
+let currentCategoria = null;  // categoria ativa (ou null = todas)
 
 function doSearch(reset = true) {
   const q = (document.getElementById('searchInput').value.trim() || '').toLowerCase();
@@ -505,12 +531,15 @@ function doSearch(reset = true) {
     document.getElementById('empty').style.display = 'none';
   }
 
+  // filtra o acervo em memória
   let filtrados = ACERVO.slice();
 
+  // por categoria (se houver uma ativa)
   if (currentCategoria) {
     filtrados = filtrados.filter(r => r.categoria === currentCategoria);
   }
 
+  // por texto (título ou tipo)
   if (q) {
     filtrados = filtrados.filter(r =>
       (r.titulo || '').toLowerCase().includes(q) ||
@@ -520,6 +549,7 @@ function doSearch(reset = true) {
   }
 
   allResults = filtrados.map(normalizar);
+
   const semFiltro = (!q && !currentCategoria);
 
   if (allResults.length === 0) {
@@ -539,11 +569,14 @@ function doSearch(reset = true) {
     : (q ? `"${q}"` : 'acervo completo');
   if (q) track('busca', { termo: q, resultados: allResults.length });
 
+  // ACERVO MISTO: se há busca por texto, também busca ao vivo no Met
+  // e acrescenta o que não estiver já no acervo local
   if (q && q.length >= 2) {
     buscarNoMetAoVivo(q, meuToken);
   }
 }
 
+// busca ao vivo no Met e acrescenta resultados novos à galeria
 async function buscarNoMetAoVivo(termo, meuToken) {
   const statusEl = document.getElementById('statusText');
   const textoOriginal = statusEl.textContent;
@@ -553,23 +586,26 @@ async function buscarNoMetAoVivo(termo, meuToken) {
     const url = `${MET}/search?hasImages=true&q=${encodeURIComponent(termo)}`;
     const res = await fetch(url);
     const data = await res.json();
-    if (meuToken !== searchToken) return;
+    if (meuToken !== searchToken) return;  // busca mudou, aborta
 
     let ids = data.objectIDs || [];
+    // ignora os que já estão nos resultados atuais
     const jaTem = new Set(allResults.map(r => r.objectID));
-    ids = ids.filter(id => !jaTem.has(id)).slice(0, 30);
+    ids = ids.filter(id => !jaTem.has(id)).slice(0, 30);  // limita a 30 novos
 
     if (ids.length === 0) {
       statusEl.textContent = textoOriginal;
       return;
     }
 
+    // busca os detalhes de cada peça
     const objetos = await Promise.all(
       ids.map(id => fetch(`${MET}/objects/${id}`).then(r => r.json()).catch(() => null))
     );
     if (meuToken !== searchToken) return;
 
     const novos = objetos.filter(o => o && o.primaryImageSmall && !jaTem.has(o.objectID));
+    // acrescenta aos resultados e renderiza
     const grid = document.getElementById('grid');
     novos.forEach(o => {
       const obj = {
@@ -597,12 +633,13 @@ async function buscarNoMetAoVivo(termo, meuToken) {
   }
 }
 
+// converte um registro do acervo no formato usado pelos cards/modal
 function normalizar(r) {
   return {
     objectID: r.met_id,
     title: r.titulo,
     artistDisplayName: r.artista,
-    data_obj: r.data_obj,
+    objectDate: r.data_obj,
     medium: r.material,
     objectName: r.tipo,
     categoria: r.categoria,
@@ -614,6 +651,7 @@ function normalizar(r) {
   };
 }
 
+// ── RENDERIZAR PÁGINA (do acervo, sem chamadas externas) ──
 function renderPage(meuToken) {
   const slice = allResults.slice(shownCount, shownCount + PER_PAGE);
   shownCount += slice.length;
@@ -630,6 +668,7 @@ function renderPage(meuToken) {
     shownCount < allResults.length ? 'block' : 'none';
 }
 
+// monta um card com botões de avaliação + selo de status
 function buildCard(obj) {
   const nAngles = obj.additionalImages
     ? 1 + obj.additionalImages.length
@@ -659,17 +698,21 @@ function buildCard(obj) {
       </div>
     </div>`;
 
+  // botão "ver mais fotos" abre o modal
   card.querySelector('[data-vermais]').onclick = (e) => {
     e.stopPropagation();
     openModal(obj);
   };
+  // clicar na imagem também abre (fallback)
   card.querySelector('img').onclick = () => openModal(obj);
   card.querySelector('.card-title').onclick = () => openModal(obj);
 
+  // cliques nos botões de avaliação (sem abrir modal)
   card.querySelectorAll('.rate-btn').forEach(btn => {
     btn.onclick = (e) => {
       e.stopPropagation();
       setRating(obj, btn.dataset.r);
+      // atualiza visual dos botões deste card
       const novoEstado = getState(obj.objectID);
       card.querySelectorAll('.rate-btn').forEach(b => {
         b.className = 'rate-btn' +
@@ -681,6 +724,7 @@ function buildCard(obj) {
   return card;
 }
 
+// atualiza o selo de um card específico na tela (quando muda pelo modal)
 function refreshCardFlag(id) {
   const card = document.querySelector(`.card[data-id="${id}"]`);
   if (!card) return;
@@ -703,25 +747,30 @@ function loadMore() {
   renderPage(searchToken);
 }
 
+// ── CATEGORIAS (menu do hero) ──────────────────────
+// monta os botões de categoria a partir do que existe no acervo
 function montarCategorias() {
   const cont = document.getElementById('heroTags');
   cont.innerHTML = '';
 
+  // conta quantas esculturas há em cada categoria
   const contagem = {};
   ACERVO.forEach(r => {
     const c = r.categoria || 'outras';
     contagem[c] = (contagem[c] || 0) + 1;
   });
 
+  // botão "todas"
   const btnTodas = document.createElement('button');
   btnTodas.className = 'hero-tag active';
   btnTodas.textContent = `todas (${ACERVO.length})`;
   btnTodas.onclick = () => selecionarCategoria(null, btnTodas);
   cont.appendChild(btnTodas);
 
+  // um botão por categoria (na ordem definida no acervo.json, se houver)
   const ordem = CATEGORIAS.length ? CATEGORIAS : Object.keys(contagem);
   ordem.forEach(cat => {
-    if (!contagem[cat]) return;
+    if (!contagem[cat]) return; // pula categoria sem itens
     const b = document.createElement('button');
     b.className = 'hero-tag';
     b.textContent = `${cat} (${contagem[cat]})`;
@@ -730,32 +779,38 @@ function montarCategorias() {
   });
 }
 
+// filtra o acervo por categoria (ou null = todas)
 function selecionarCategoria(cat, btn) {
   currentCategoria = cat;
   document.querySelectorAll('.hero-tag').forEach(t => t.classList.remove('active'));
   if (btn) btn.classList.add('active');
+  // limpa a busca de texto ao trocar de categoria
   document.getElementById('searchInput').value = '';
   track('categoria_clicada', { categoria: cat || 'todas' });
   doSearch(true);
 }
 
+// ── ABAS: acervo / gostei / talvez / não gostei ────
 function setView(view, btn) {
   currentView = view;
   document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
 
   if (view === 'all') {
+    // volta pra busca normal
     document.getElementById('loadMoreWrap').style.display =
       shownCount < allResults.length ? 'block' : 'none';
     document.getElementById('statusText').textContent =
       (currentQuery && currentQuery !== 'sculpture') ? `"${currentQuery}"` : 'acervo completo';
     document.getElementById('grid').innerHTML = '';
+    // re-renderiza os resultados já buscados
     reRenderCurrentSearch();
   } else {
     renderView(view);
   }
 }
 
+// re-renderiza a busca atual (usado ao voltar pra aba acervo)
 function reRenderCurrentSearch() {
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
@@ -767,6 +822,7 @@ function reRenderCurrentSearch() {
     shownCount < allResults.length ? 'block' : 'none';
 }
 
+// mostra os itens salvos de uma categoria
 function renderView(estado) {
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
@@ -788,6 +844,7 @@ function renderView(estado) {
   itens.forEach(r => grid.appendChild(buildCard(r.obj)));
 }
 
+// ── AVALIAR PELO MODAL ─────────────────────────────
 function rateFromModal(estado) {
   if (!modalObj) return;
   setRating(modalObj, estado);
@@ -801,6 +858,7 @@ function syncModalButtons(id) {
   });
 }
 
+// ── MODAL: TODOS OS ÂNGULOS ────────────────────────
 function openModal(obj) {
   modalObj = obj;
   track('escultura_aberta', { id: obj.objectID, titulo: obj.title || '', categoria: obj.categoria || '' });
@@ -814,14 +872,17 @@ function openModal(obj) {
     ID: ${obj.objectID}
   `;
 
+  // abre já com a primeira imagem (instantâneo)
   const primeira = obj.primaryImage || obj.primaryImageSmall;
   renderModalImages([primeira], obj);
   document.getElementById('angleCount').textContent = 'procurando outros ângulos...';
 
+  // reseta o modo de foto do modal pra seguir o modo do site
   const mgrid = document.getElementById('modalGrid');
   mgrid.classList.remove('modal-original', 'modal-marmore');
   const btnModo = document.getElementById('btnModoFoto');
   if (btnModo) {
+    // o botão mostra o que a pessoa VAI ver ao clicar (a ação)
     btnModo.textContent = document.body.classList.contains('mono')
       ? '◑ ver foto original' : '◐ ver efeito mármore';
   }
@@ -831,6 +892,7 @@ function openModal(obj) {
   document.querySelector('.modal-bg').scrollTop = 0;
   syncModalButtons(obj.objectID);
 
+  // se já buscamos os ângulos antes nesta sessão, usa o que está em memória
   if (obj.additionalImages) {
     const todas = [obj.primaryImage || primeira, ...obj.additionalImages];
     renderModalImages(todas, obj);
@@ -839,6 +901,9 @@ function openModal(obj) {
     return;
   }
 
+  // SEMPRE busca os ângulos no Met ao abrir (não confia no n_angulos salvo).
+  // Assim, mesmo que o acervo diga "1 ângulo", se a peça tiver mais no Met,
+  // eles aparecem. E se o dado salvo estiver errado, corrige na hora.
   document.getElementById('angleCount').textContent = 'procurando outros ângulos...';
   const idAberto = obj.objectID;
   fetch(`${MET}/objects/${obj.objectID}`)
@@ -860,24 +925,27 @@ function openModal(obj) {
     });
 }
 
+// alterna entre "efeito mármore" (P&B) e "foto original" (colorida) só no modal
 function alternarModoModal() {
   const grid = document.getElementById('modalGrid');
   const btn = document.getElementById('btnModoFoto');
+  // estado atual: se está mostrando mármore (P&B) ou original (cor)
   const mostrandoMarmore = grid.classList.contains('modal-marmore') ||
     (!grid.classList.contains('modal-original') && document.body.classList.contains('mono'));
 
   grid.classList.remove('modal-original', 'modal-marmore');
   if (mostrandoMarmore) {
-    grid.classList.add('modal-original');
+    grid.classList.add('modal-original');   // troca pra colorida
     btn.textContent = '◐ ver efeito mármore';
     track('modal_modo_foto', { modo: 'original' });
   } else {
-    grid.classList.add('modal-marmore');
+    grid.classList.add('modal-marmore');    // troca pra mármore
     btn.textContent = '◑ ver foto original';
     track('modal_modo_foto', { modo: 'marmore' });
   }
 }
 
+// botão "buscar mais fotos desta peça" — reconsulta o Met e traz TODAS as imagens
 function buscarMaisFotos() {
   if (!modalObj) return;
   const obj = modalObj;
@@ -910,11 +978,13 @@ function buscarMaisFotos() {
     });
 }
 
+// desenha as imagens (ângulos) na grade do modal
 function renderModalImages(imgs, obj) {
   const mg = document.getElementById('modalGrid');
   mg.innerHTML = '';
   imgs.forEach((url, i) => {
     if (!url) return;
+    // versão leve pra EXIBIR (web-large ~200KB em vez de original ~20MB)
     const urlLeve = url.replace('/original/', '/web-large/');
     const c = document.createElement('div');
     c.className = 'modal-card';
@@ -930,11 +1000,13 @@ function renderModalImages(imgs, obj) {
   });
 }
 
+
 function closeModal() {
   document.getElementById('modal').classList.remove('open');
   document.body.style.overflow = '';
 }
 
+// ── UTILS ──────────────────────────────────────────
 function setLoading(v) {
   document.getElementById('loading').style.display = v ? 'block' : 'none';
 }
@@ -952,11 +1024,13 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 
+// keyboard
 document.getElementById('searchInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') {
+    // busca por texto ignora a categoria: procura no acervo inteiro
     currentCategoria = null;
     document.querySelectorAll('.hero-tag').forEach((t, i) =>
-      t.classList.toggle('active', i === 0));
+      t.classList.toggle('active', i === 0));  // marca "todas"
     doSearch(true);
   }
 });
@@ -965,13 +1039,18 @@ document.getElementById('modal').addEventListener('click', e => {
   if (e.target.id === 'modal') closeModal();
 });
 
+// ── DOWNLOAD INTELIGENTE ───────────────────────────
+// Se modo P&B estiver ligado, gera a versão preto-e-branco de verdade
+// via canvas. Se estiver colorido, baixa o original direto.
 async function smartDownload(url, filename) {
   track('download', { modo: monoOn ? 'pb' : 'cor' });
+  // Modo colorido: baixa o original direto
   if (!monoOn) {
     baixarDireto(url, filename + '.jpg');
     return;
   }
 
+  // Modo P&B: reprocessa em canvas
   showToast('gerando versão p&b...');
   try {
     const img = new Image();
@@ -988,6 +1067,7 @@ async function smartDownload(url, filename) {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0, 0);
 
+    // aplica grayscale pixel a pixel (luminância ponderada)
     const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const px = data.data;
     for (let i = 0; i < px.length; i += 4) {
@@ -1005,6 +1085,7 @@ async function smartDownload(url, filename) {
     }, 'image/jpeg', 0.95);
 
   } catch (e) {
+    // servidor não liberou reprocessamento — oferece colorido
     fallbackColorido(url, filename);
   }
 }
@@ -1024,35 +1105,38 @@ function baixarDireto(url, nome) {
   document.body.removeChild(a);
 }
 
-let monoOn = true;
+// ── MODO P&B ───────────────────────────────────────
+let monoOn = true; // começa em preto e branco
 
 function toggleMono() {
   monoOn = !monoOn;
   const btn = document.getElementById('monoBtn');
   if (monoOn) {
     document.body.classList.add('mono');
-    btn.textContent = 'ver foto original';
+    btn.textContent = 'ver foto original';   // está em P&B, oferece original
   } else {
     document.body.classList.remove('mono');
-    btn.textContent = 'ver efeito mármore';
+    btn.textContent = 'ver efeito mármore';  // está colorido, oferece mármore
   }
   track('troca_cor', { modo: monoOn ? 'pb' : 'cor' });
 }
 
+// ── TEMA ───────────────────────────────────────────
 function toggleTheme() {
   const root = document.documentElement;
   const isLight = root.getAttribute('data-theme') === 'light';
   const btn = document.getElementById('themeBtn');
   if (isLight) {
     root.removeAttribute('data-theme');
-    btn.textContent = 'ligar modo claro';
+    btn.textContent = 'ligar modo claro';   // ficou escuro, oferece claro
   } else {
     root.setAttribute('data-theme', 'light');
-    btn.textContent = 'ligar modo escuro';
+    btn.textContent = 'ligar modo escuro';  // ficou claro, oferece escuro
   }
   track('troca_tema', { tema: isLight ? 'escuro' : 'claro' });
 }
 
+// ── PROFUNDIDADE DE ROLAGEM ────────────────────────
 const marcosScroll = { '25': false, '50': false, '75': false, '100': false };
 function checarScroll() {
   const h = document.documentElement;
@@ -1071,16 +1155,19 @@ window.addEventListener('scroll', () => {
   window._scrollT = setTimeout(checarScroll, 200);
 });
 
+// ── INIT ───────────────────────────────────────────
 window.addEventListener('load', async () => {
-  document.body.classList.add('mono');
-  updateCounts();
+  document.body.classList.add('mono'); // inicia em p&b
+  updateCounts();                      // contadores salvos
   setLoading(true);
 
+  // carrega o acervo do arquivo externo; se falhar OU vier vazio, usa o embutido
   try {
     const res = await fetch('acervo.json');
     if (!res.ok) throw new Error('sem acervo.json');
     const data = await res.json();
     const lista = (data && Array.isArray(data.esculturas)) ? data.esculturas : [];
+    // só usa o externo se ele tiver conteúdo válido
     if (lista.length > 0) {
       ACERVO = lista;
       CATEGORIAS = Array.isArray(data.categorias) ? data.categorias : [];
@@ -1088,10 +1175,12 @@ window.addEventListener('load', async () => {
       throw new Error('acervo.json vazio');
     }
   } catch(e) {
+    // fallback: acervo embutido no próprio site (sempre funciona)
     ACERVO = ACERVO_EMBUTIDO.esculturas || [];
     CATEGORIAS = ACERVO_EMBUTIDO.categorias || [];
   }
 
+  // garantia final: se por qualquer motivo ficou vazio, usa o embutido
   if (!Array.isArray(ACERVO) || ACERVO.length === 0) {
     ACERVO = ACERVO_EMBUTIDO.esculturas || [];
     CATEGORIAS = ACERVO_EMBUTIDO.categorias || [];
@@ -1099,11 +1188,12 @@ window.addEventListener('load', async () => {
 
   setLoading(false);
   try {
-    montarCategorias();
+    montarCategorias();       // monta o menu de categorias
     currentQuery = '';
     currentCategoria = null;
-    doSearch(true);
+    doSearch(true);           // mostra o acervo completo
   } catch(err) {
+    // se algo quebrar, tenta de novo só com o embutido
     console.error('erro ao montar galeria:', err);
     ACERVO = ACERVO_EMBUTIDO.esculturas || [];
     CATEGORIAS = ACERVO_EMBUTIDO.categorias || [];
