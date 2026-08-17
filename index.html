@@ -1027,7 +1027,9 @@ function renderModalImages(imgs, obj) {
     const urlLeve = url.replace('/original/', '/web-large/');
     const c = document.createElement('div');
     c.className = 'modal-card';
-    const filename = `met_${obj.objectID}_${i === 0 ? 'principal' : 'angulo' + i}`;
+    const filename = obj._isEgg
+      ? 'mais-fantastico-que-qualquer-obra-do-gabo-mais-venustas-que-vetruvius'
+      : `met_${obj.objectID}_${i === 0 ? 'principal' : 'angulo' + i}`;
     c.innerHTML = `
       <img src="${urlLeve}" alt="ângulo ${i+1}" loading="lazy"
            onerror="this.onerror=null; this.src='${url}'">
