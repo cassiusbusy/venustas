@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
@@ -359,12 +360,12 @@
   .m-rate-btn.on-nope  { background: #a13d3d; border-color: #a13d3d; color: #fff; }
 
   .theme-btn {
-    background: none; border: 1px solid var(--border); color: var(--text2);
+    background: rgba(200,184,154,0.12); border: 1px solid var(--accent2); color: var(--accent);
     font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 2px;
     padding: 8px 14px; cursor: pointer; text-transform: uppercase;
-    transition: all 0.2s; flex-shrink: 0;
+    transition: all 0.2s; flex-shrink: 0; font-weight: 700;
   }
-  .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .theme-btn:hover { border-color: var(--accent); background: var(--accent); color: var(--bg); }
 </style>
 </head>
 <body>
@@ -380,8 +381,8 @@
       <input type="text" id="searchInput" placeholder="buscar: statue, bust, goddess, torso..." />
       <button class="search-btn" onclick="doSearch()">→</button>
     </div>
-    <button class="theme-btn" id="monoBtn" onclick="toggleMono()">◐ p&amp;b</button>
-    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">☾ escuro</button>
+    <button class="theme-btn" id="monoBtn" onclick="toggleMono()">ver foto original</button>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">ligar modo escuro</button>
   </div>
 </header>
 
@@ -987,7 +988,7 @@ function buscarMaisFotos() {
 
   // a surpresa não existe no Met
   if (obj._isEgg) {
-    document.getElementById('angleCount').textContent = 'esta é uma peça especial! Único exemplar, impossível ter qualquer cópia aproximada';
+    document.getElementById('angleCount').textContent = 'esta é uma peça especial! Único exemplar, impossível ter exemplar aproximado';
     return;
   }
 
@@ -1154,10 +1155,10 @@ function toggleMono() {
   const btn = document.getElementById('monoBtn');
   if (monoOn) {
     document.body.classList.add('mono');
-    btn.textContent = '◐ p&b';
+    btn.textContent = 'ver foto original';   // está em P&B, oferece original
   } else {
     document.body.classList.remove('mono');
-    btn.textContent = '◐ cor';
+    btn.textContent = 'ver efeito mármore';  // está colorido, oferece mármore
   }
   track('troca_cor', { modo: monoOn ? 'pb' : 'cor' });
 }
@@ -1169,10 +1170,10 @@ function toggleTheme() {
   const btn = document.getElementById('themeBtn');
   if (isLight) {
     root.removeAttribute('data-theme');
-    btn.textContent = '☾ escuro';
+    btn.textContent = 'ligar modo claro';   // ficou escuro, oferece claro
   } else {
     root.setAttribute('data-theme', 'light');
-    btn.textContent = '☀ claro';
+    btn.textContent = 'ligar modo escuro';  // ficou claro, oferece escuro
   }
   track('troca_tema', { tema: isLight ? 'escuro' : 'claro' });
 }
